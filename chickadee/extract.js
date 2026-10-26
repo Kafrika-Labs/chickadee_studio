@@ -17,7 +17,7 @@
     if (!frame && selectorCache.has(el)) return selectorCache.get(el);
     const parts = [];
     for (let node = el; node; node = node.parentElement) {
-      let part = node.tagName.toLowerCase();
+      let part = CSS.escape(node.tagName.toLowerCase());
       const classes = [...node.classList].map(c => '.' + CSS.escape(c)).join('');
       part += classes;
       const siblings = node.parentElement ? [...node.parentElement.children].filter(n => n.tagName === node.tagName) : [node];
@@ -99,16 +99,19 @@
     return result;
   }
   const elements = [];
-  const commentScope = '[data-comment-id], [data-reply-id], [itemprop="comment"], .comment, .comment-item, .comment_item, .reply, .reply-item, .reply_item';
+  const commentScope = '[data-comment-id], [data-reply-id], [itemprop="comment"], .comment, .comment-item, .comment_item, .comment-contents, .reply, .reply-item, .reply_item';
   const contentScope = commentScope + ', [role="article"], article, [data-post-id]';
+  // Common CMS article bodies are often divs, not semantic article elements.
+  // Keep site-wide wrappers out: they also contain navigation and sharing UI.
+  const articleBody = contentScope + ', [itemprop="articleBody"], .post-content, .entry-content, .board-content, .board-view-content, .view-content, .viewCont, .view-con, .view_cont, .ViewBoxContent, #boardcontentDs, #dataContentArea';
   const sourceRole = el => {
     if (el.closest(commentScope)) return 'comment';
     if (el.closest('.post-title,.board-title,.entry-title,.article-title,[data-role="title"],[itemprop="headline"]') ||
         (el.closest('h1') && el.closest('article,[role="article"],[data-post-id]'))) return 'title';
     return el.closest('h1,h2,h3,h4,h5,h6') ? 'heading' : 'body';
   };
-  const isInterfaceImage = el => !!el.closest('nav,[role="navigation"],[role="search"],.logo,.brand,.site-logo,.brand-logo') ||
-    (!!el.closest('header,footer') && !el.closest(contentScope)) ||
+  const isInterfaceImage = el => !!el.closest('nav,[role="navigation"],[role="search"],.logo,.brand,.site-logo,.brand-logo,.shareWrap,.share-wrap,.sns-share,.sns_share,[data-role="share"]') ||
+    (!!el.closest('header,footer') && !el.closest(articleBody)) ||
     el.getAttribute('aria-hidden') === 'true' || el.getAttribute('role') === 'presentation' ||
     (!el.closest(contentScope) && !!el.closest('h1,h2,h3,h4,h5,h6') && el.getAttribute('alt') === '');
   // Build text from DOM text nodes, excluding executable/style source. Also
@@ -205,7 +208,7 @@
   const uniqueImageSources = new Set();
   let imageReferenceBytes = 0;
   let imagesTruncated = false;
-  const imageContent = el => !!el.closest('article, [role="article"], [data-post-id], [data-comment-id], .post-content, .board-content, .view-content, .comment-content');
+  const imageContent = el => !!el.closest(articleBody);
   const imageElements = all.slice(0, 5000).sort((a, b) => Number(imageContent(b)) - Number(imageContent(a)));
   for (const el of imageElements) {
     if (contentRoots && !contentRoots.some(root => root === el || root.contains(el))) continue;
@@ -227,10 +230,12 @@
         ((el.tagName !== 'IMG' && ['inline', 'inline-block'].includes(style(el).display) && Math.max(box.width, box.height) <= 96) ||
          (!!el.closest('nav, [role="navigation"], button, [role="button"]') && Math.max(box.width, box.height) <= 96) ||
          (el.tagName === 'IMG' && /^(?:.*\s)?(?:logo|로고)$/i.test(el.alt.trim()) && Math.max(box.width, box.height) <= 240));
+      const interfaceRole = interfaceImage || isInterfaceImage(el) ||
+        (el.tagName !== 'IMG' && !inContent && !el.closest('a[href]'));
       images.push({source_url: src, location: selector(el), computed_style: appearance(el).style,
         source_role: sourceRole(el),
-        interface_image: isInterfaceImage(el) || (el.tagName !== 'IMG' && !el.closest(contentScope) && !el.closest('a[href]')),
-        image_role: (interfaceImage || isInterfaceImage(el)) ? 'interface' : inContent ? 'content' : 'unspecified',
+        interface_image: interfaceRole,
+        image_role: interfaceRole ? 'interface' : inContent ? 'content' : 'unspecified',
         transparent: appearance(el).transparent, offscreen: appearance(el).offscreen,
         link_targets: el.closest('a[href]') ? [el.closest('a[href]').href] : [],
         source_type: el.tagName === 'IMG' ? 'img' : 'background'});

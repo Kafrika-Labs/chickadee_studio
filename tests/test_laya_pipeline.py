@@ -23,6 +23,15 @@ SIGNAL={'status':'completed','model':'Laya','version':'test-fixture', 'score':.8
 
 
 class PipelineTests(unittest.IsolatedAsyncioTestCase):
+    async def test_source_launch_discovers_prepared_bundle_without_overriding_explicit_settings(self):
+        from chickadee.laya_review import configuration
+        with tempfile.TemporaryDirectory() as temp, patch('chickadee.laya_review.ROOT', Path(temp)), patch.dict(os.environ, {}, clear=True):
+            bundle = Path(temp) / 'artifacts/laya-model'
+            bundle.mkdir(parents=True)
+            (bundle / 'manifest.json').write_text('{}')
+            self.assertEqual(configuration(), (str(bundle.resolve()), None))
+            with patch.dict(os.environ, {'CHICKADEE_LAYA_MODEL_DIR': str(Path(temp) / 'explicit')}):
+                self.assertEqual(configuration()[0], str((Path(temp) / 'explicit').resolve()))
     async def test_short_ocr_glyph_never_becomes_ad_context_even_with_photo_row(self):
         from chickadee.local_ai import add_model_candidates
         source = {'url':'http://example.invalid/', 'location':'img', 'source_kind':'image_ocr', 'text':'+'}
@@ -78,7 +87,7 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(value[0]['reason'],'inference_failed')
 
     async def test_missing_model_does_not_start_worker_or_call_paid_api(self):
-        with patch.dict(os.environ,{},clear=True), patch('asyncio.create_subprocess_exec') as process, patch('chickadee.agent.groq_request') as paid:
+        with tempfile.TemporaryDirectory() as temp, patch('chickadee.laya_review.ROOT',Path(temp)), patch.dict(os.environ,{},clear=True), patch('asyncio.create_subprocess_exec') as process, patch('chickadee.agent.groq_request') as paid:
             result=await LayaSession().analyze(['도서관 안내'])
         self.assertEqual(result[0]['status'],'unavailable');process.assert_not_called();paid.assert_not_called()
 
@@ -102,6 +111,12 @@ class PipelineTests(unittest.IsolatedAsyncioTestCase):
         with patch.dict(os.environ,{'CHICKADEE_LAYA_MODEL_DIR':'unused'}), patch('chickadee.runtime.memory_info',return_value={'available_bytes':1024**3}), patch('asyncio.create_subprocess_exec') as process:
             value=await LayaSession().analyze(['원문'])
         self.assertEqual(value[0]['reason'],'insufficient_memory');process.assert_not_called()
+
+    async def test_memory_efficient_worker_can_start_with_two_gib_available(self):
+        with patch.dict(os.environ, {'CHICKADEE_LAYA_MODEL_DIR': 'unused'}, clear=True), patch('chickadee.runtime.memory_info', return_value={'available_bytes': 2*1024**3}), patch('asyncio.create_subprocess_exec', side_effect=OSError('fixture')) as process:
+            value = await LayaSession().analyze(['광고 문구'])
+        process.assert_awaited_once()
+        self.assertEqual(value[0]['reason'], 'inference_failed')
 
     async def test_expired_time_budget_never_starts_worker(self):
         with patch('asyncio.create_subprocess_exec') as process:

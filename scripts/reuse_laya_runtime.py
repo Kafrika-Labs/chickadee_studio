@@ -19,7 +19,10 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--version',required=True);args=parser.parse_args()
     from release import version
     if args.version!=version():raise ValueError('Runtime destination version mismatch')
-    subprocess.run(['git','fetch','--depth=1','origin','tag',BASE],cwd=ROOT,check=True)
+    fetched=subprocess.run(['git','fetch','--depth=1','origin','tag',BASE],cwd=ROOT)
+    if fetched.returncode:
+        print('Pinned historical runtime is unavailable: build a fresh verified worker.')
+        return 2
     changed=subprocess.run(['git','diff','--quiet',BASE,'HEAD','--',*SOURCES],cwd=ROOT).returncode
     if changed==1:
         print('Laya source/dependencies changed: build a fresh worker.');return 2

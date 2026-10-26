@@ -77,6 +77,7 @@ def main():
         '사용 안내: docs/quickstart-windows.md, docs/desktop.md\n'
         '이미지 속 한국어 문구도 자동 검사합니다. OCR 모델은 동봉되어 별도 설치가 필요하지 않습니다.\n'
         '한국어 Laya 모델과 CPU 실행 환경도 동봉되어 별도 설치 없이 OCR → ML → Laya로 분석합니다.\n'
+        '설정의 제한시간은 웹 탐색에 적용합니다. 수집 자료의 로컬 분석은 별도의 최대 30분 안에서 이어갑니다. 중단 버튼으로 멈출 수 있습니다.\n'
         '학습한 문자·화면 AI 분석은 무료 로컬 처리입니다. 근거 패널과 검사 분석 → AI 검토에서 확인하세요.\n'
         '설정 → 일반 → 실행 환경에서 자동·표준·절약 모드와 CPU·메모리를 확인합니다. 절약 모드는 이미지 OCR을 생략합니다.\n'
         'OCR 기능 확인 버튼은 인터넷 접속 없이 동봉된 한국어 모델을 시험합니다. GPU는 필수가 아닙니다.\n'
@@ -98,6 +99,7 @@ def main():
         'The workflow order is fixed; enable image OCR in its node settings.\n'
         'Guides: docs/quickstart-windows.en.md and docs/desktop.en.md. The app interface is in Korean.\n'
         'Korean OCR, the trained Laya model and its CPU runtime are bundled for local OCR -> ML -> Laya analysis.\n'
+        'The configured deadline bounds web collection. Collected evidence has a separate offline analysis budget of up to 30 minutes; Stop remains available.\n'
         'Text and visual AI run locally without paid requests. Review evidence and Inspection analysis -> AI review.\n'
         'Settings -> General -> Runtime offers Auto, Standard and Economy; Economy skips image OCR.\n'
         'The OCR check tests bundled models offline. No GPU is required.\n'
@@ -113,7 +115,10 @@ def main():
     validate_zip_paths(name for _, name in entries)
     with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as archive:
         for file, name in entries:
-            archive.write(file, name)
+            # Large tensor checkpoints dominate packaging CPU time. Fast DEFLATE
+            # preserves their exact bytes and keeps the release below GitHub's
+            # per-asset size limit without recompressing them at level six.
+            archive.write(file, name, compresslevel=1 if file.suffix == '.safetensors' else 6)
     with zipfile.ZipFile(temporary) as archive:
         invalid = archive.testzip()
         if invalid:

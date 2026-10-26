@@ -15,7 +15,9 @@ a = Analysis(
            (str(root / 'profiles'), 'profiles'),
            (str(root / 'artifacts/ocr-models'), 'ocr-models')] + paddle_datas,
     hiddenimports=paddle_hidden, hookspath=[], hooksconfig={}, runtime_hooks=[],
-    excludes=['tkinter'], noarchive=False, optimize=0,
+    # The dedicated Laya worker ships Torch; keeping it out of the Paddle engine
+    # prevents duplicate gigabytes and incompatible Windows DLLs in one process.
+    excludes=['tkinter', 'torch', 'laya', 'transformers'], noarchive=False, optimize=0,
 )
 # Do not ship the second, unused headed browser. Keep headless shell, ffmpeg,
 # and WinDLL diagnostics. This filters build data; installed browsers stay intact.

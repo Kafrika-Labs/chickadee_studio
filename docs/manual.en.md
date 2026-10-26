@@ -15,7 +15,7 @@
 5. Select a result for original text, page URL and selector. Use the technique filter to narrow results.
 6. Check completion and saving status before using `result.json`. For partial, cancelled or failed runs, inspect omissions/errors in `scan-report.json`.
 
-Defaults: UI 100 pages (CLI 50), total 300 seconds, 15 seconds/page, 500 ms settle time, 1 second between pages and one retry. DOM snapshots are inspected before/after scrolling and read actions. Total time can be at most 1,800 seconds. Stopping saves collected results; browser cleanup and disk writes can take extra time. `elapsed_sec` includes browser preparation, navigation and cleanup but excludes output-file writing.
+Defaults: UI 100 pages (CLI 50), 300 seconds for web collection, 15 seconds/page, 500 ms settle time, 1 second between pages and one retry. DOM snapshots are inspected before/after scrolling and read actions. Web collection allows up to 1,800 seconds. ML and Laya receive a separate bounded offline analysis budget of up to 1,800 seconds. Stop preserves collected results and completed analysis. `elapsed_sec` includes preparation, collection, offline analysis and cleanup but excludes output-file writing.
 
 ## Run from source
 

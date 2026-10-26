@@ -32,6 +32,12 @@ def configuration():
                 raise ValueError('Laya 설정 형식 오류')
     folder = os.environ.get('CHICKADEE_LAYA_MODEL_DIR') or value.get('model_dir')
     executable = os.environ.get('CHICKADEE_LAYA_PYTHON') or value.get('python')
+    # Source launches and the build pipeline share the prepared offline bundle.
+    # Explicit user configuration still wins. The worker verifies every file
+    # and the independently evaluated checkpoint before loading any tensors.
+    prepared = ROOT / 'artifacts' / 'laya-model'
+    if not folder and not getattr(sys, 'frozen', False) and (prepared / 'manifest.json').is_file():
+        folder = str(prepared)
     if folder:
         if not isinstance(folder, str): raise ValueError('Laya 모델 경로 오류')
         folder = str(Path(folder).resolve())
@@ -80,9 +86,10 @@ class LayaSession:
             return [unavailable() for _ in texts]
         from .runtime import memory_info, GIB
         available = memory_info()['available_bytes']
-        # Measured bundled CPU peak: 2.78 GiB working set, about 2.04 GiB
-        # additional available memory. Keep a reserve and monitor it while loading.
-        if self.process is None and available is not None and available < 2.75 * GIB:
+        # The bundled worker assigns CPU checkpoint tensors without a second
+        # FP32 copy. Measured frozen-worker peak: 896 MiB on 4,000-char inputs.
+        # Require 1.75 GiB free and retain the live 0.5 GiB safety reserve below.
+        if self.process is None and available is not None and available < 1.75 * GIB:
             return [unavailable('insufficient_memory') for _ in texts]
         bundled_worker = os.environ.get('CHICKADEE_LAYA_WORKER')
         if bundled_worker:
@@ -206,8 +213,8 @@ async def review_sources(sources, *, stop=None, emit=lambda _: None, timeout_sec
                'batch_size': BATCH_SIZE, 'source_items':len(sources), 'eligible_items':len(eligible),
                'covered':len(eligible)-omitted, 'skipped_empty':len(sources)-len(eligible),
                'omitted': omitted, 'paid_requests': 0}
-    if not completed and results:
-        summary['reason'] = results[0].get('reason', 'inference_failed')
+    if not completed and omitted:
+        summary['reason'] = results[0].get('reason', 'inference_failed') if results else failure_reason
     emit({'kind': 'phase', 'stage': 'laya', 'action': 'complete' if completed else 'skipped',
           'message': f'Laya {completed}개 문맥 검토' if completed else 'Laya 미적용 · 기존 탐지 결과 유지'})
     return summary

@@ -47,7 +47,7 @@ Failure, unreadable and skipped are distinct from no findings. Check OCR status 
 
 ![General settings](../desktop/assets/guide/general.png)
 
-Maximum pages and total time bound the scan; reaching them does not establish full-site coverage. Navigation waits are Fast 0 seconds, Normal 0.5 seconds and Slow 5 seconds, or 0–30 seconds with the slider. They delay the next page, not current-page processing. Increase the total deadline when using longer waits.
+Maximum pages and the configured deadline bound web collection; reaching them does not establish full-site coverage. Collected evidence receives a separate offline ML/Laya analysis budget of up to 30 minutes. Stop remains available during local analysis. Navigation waits are Fast 0 seconds, Normal 0.5 seconds and Slow 5 seconds, or 0–30 seconds with the slider. They delay the next page, not current-page processing. Increase the collection deadline when using longer waits.
 
 Auto selects a runtime mode from device resources. Standard uses available OCR and local AI; Economy skips image OCR while preserving technique detection. Check feature status and the OCR check result. Choose the output directory with the folder icon; every run has a separate folder. Disable live browser preview to hide periodic captures. Settings search helps locate speed, OCR and storage controls.
 

@@ -25,7 +25,7 @@ from .image_ocr import (OCRSession, fetch_image, inline_image, recognized_text, 
                         image_metadata, MAX_IMAGE_REQUESTS, MAX_IMAGE_BYTES)
 from .local_ai import enrich_report, visual_analysis, prepare_models
 from .content_visual import enrich_content_images, model_contract as photo_model_contract
-from .laya_review import enrich_laya, analysis_reserve
+from .laya_review import enrich_laya, MAX_REVIEW_SECONDS
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots, SCREENSHOT_MAX_COUNT, SCREENSHOT_MAX_BYTES, OCR_MAX_OBSERVATIONS
@@ -307,7 +307,6 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
     rules = Rules.load(config.rules_path)
     profile = SiteProfile.load(config.profile_path)
     status = "completed"
-    reserved_analysis = analysis_reserve(config.timeout_sec)
     emit({"kind": "status", "message": "브라우저를 준비하고 있습니다."})
     worker = asyncio.create_task(_crawl(config, state, emit, rules, profile, control))
     try:
@@ -316,9 +315,9 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
                 status = "cancelled"
                 worker.cancel()
                 break
-            if time.monotonic() - clock - (control.paused_seconds if control else 0) >= config.timeout_sec-reserved_analysis:
+            if time.monotonic() - clock - (control.paused_seconds if control else 0) >= config.timeout_sec:
                 status = "partial"
-                state.errors.append({"url": config.entry_url, "message": "분석 시간을 확보하기 위해 탐색을 마쳤습니다. 일부 결과입니다." if reserved_analysis else "전체 제한시간에 도달했습니다. 일부 결과입니다."})
+                state.errors.append({"url": config.entry_url, "message": "탐색 제한시간에 도달했습니다. 수집한 자료의 로컬 분석은 계속합니다."})
                 worker.cancel()
                 break
             await asyncio.wait({worker}, timeout=0.1)
@@ -367,18 +366,32 @@ async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control
               "execution_mode": "network-explicit" if config.allow_network else "loopback-only",
               "limits": {"max_pages": config.max_pages, "timeout_sec": config.timeout_sec,
                          "page_timeout_sec": config.page_timeout_sec, "settle_ms": config.settle_ms,
-                         "retries": config.retries, "interval_sec": config.interval_sec},
+                         "retries": config.retries, "interval_sec": config.interval_sec,
+                         "timeout_scope": "collection", "analysis_timeout_sec": MAX_REVIEW_SECONDS},
               "enabled_stages": {"follow_links": config.follow_links, "techniques": config.detect_techniques,
                                  "candidates": config.detect_candidates, "ocr": config.ocr_enabled,
                                  "ocr_techniques": config.ocr_techniques, "ocr_candidates": config.ocr_candidates, "live_preview": config.capture_previews}}
-    emit({'kind': 'phase', 'stage': 'candidates', 'action': 'local_ai', 'message': 'ML로 본문과 OCR 문자 문맥을 분석합니다.'})
+    # Collection limits must never silently cut off already collected evidence.
+    # Offline analysis has its own bounded budget and still honors user Stop.
+    analysis_started = time.monotonic()
+    remaining_analysis = lambda: max(0, MAX_REVIEW_SECONDS - (time.monotonic() - analysis_started))
+    emit({'kind': 'phase', 'stage': 'candidates', 'action': 'local_ai',
+          'analysis_timeout_sec': MAX_REVIEW_SECONDS,
+          'message': '탐색과 별도의 로컬 분석 시간으로 수집한 본문과 OCR 문구를 처리합니다.'})
     await asyncio.to_thread(enrich_report, report, candidates=config.detect_candidates)
     emit({'kind':'phase','stage':'candidates','action':'photo_model','message':'이미지 내용을 ML로 분류합니다.'})
     await enrich_content_images(report, state.image_assets, candidates=config.detect_candidates,
-        timeout_seconds=min(45,max(0,config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0)))),stop=stop)
-    await enrich_laya(report, stop=stop, emit=emit,
-        timeout_seconds=max(0, config.timeout_sec-(time.monotonic()-clock-(control.paused_seconds if control else 0))),
+        timeout_seconds=min(45, remaining_analysis()),stop=stop)
+    laya = await enrich_laya(report, stop=stop, emit=emit,
+        timeout_seconds=remaining_analysis(),
         candidates=config.detect_candidates)
+    report['analysis_elapsed_sec'] = round(time.monotonic() - analysis_started, 3)
+    if stop.is_set():
+        report['status'] = 'cancelled'
+    elif isinstance(laya, dict) and laya.get('omitted') and report['status'] == 'completed' and (
+            laya.get('status') == 'partial' or laya.get('reason') in ('time_budget', 'timeout')):
+        report['status'] = 'partial'
+        report['errors'].append({'stage': 'laya', 'message': f"Laya 문맥 {laya['omitted']}개 미처리: 분석 제한시간 또는 실행 환경을 확인하세요."})
     emit({'kind': 'phase', 'stage': 'dedup', 'action': 'merge',
           'message': f'동일 문구의 본문·OCR 근거 {state.merged_observations}건을 합쳤습니다.'})
     result['meta'].update(finished_at=datetime.now().astimezone().isoformat(),
@@ -645,13 +658,21 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                               "discovered_from": parents.get(key)}
                 state.page_diagnostics.append(diagnostic)
                 findings_before, candidates_before = len(state.findings), len(state.ad_candidates)
-                page.on("dialog", lambda dialog: dialog.dismiss())
+                access_denials = []
+                async def dismiss_dialog(dialog):
+                    message = re.sub(r'\s+', ' ', dialog.message).strip()[:200]
+                    if re.search(r'권한이 없|접근.{0,8}(?:금지|불가|제한)|access denied|permission denied', message, re.I):
+                        access_denials.append(message)
+                    await dialog.dismiss()
+                page.on("dialog", dismiss_dialog)
                 page.on("popup", lambda popup: popup.close())
                 try:
                     identity = {}
                     icon_url = urljoin(url, '/favicon.ico')
                     async def check_login(response=None):
                         nonlocal icon_url
+                        if access_denials:
+                            raise RuntimeError('접근 제한으로 미수집: ' + access_denials[0])
                         redirect = state.pending_redirects.pop(page.url, None)
                         if redirect:
                             response = await _navigate(page, redirect, config, state, emit)
@@ -669,7 +690,12 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
 
                     async def inspect_once():
                         nonlocal site
-                        response = await _navigate(page, url, config, state, emit)
+                        try:
+                            response = await _navigate(page, url, config, state, emit)
+                        except Exception:
+                            if access_denials:
+                                raise RuntimeError('접근 제한으로 미수집: ' + access_denials[0]) from None
+                            raise
                         await page.wait_for_timeout(config.settle_ms)
                         await check_login(response)
                         diagnostic["final_url"] = page.url
@@ -681,6 +707,24 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                             raise RuntimeError(f"HTTP {response.status}")
                         if response and "html" not in response.headers.get("content-type", "text/html"):
                             raise RuntimeError("HTML 문서가 아니어서 점검하지 않았습니다.")
+                        if origin(page.url) != origin(config.entry_url):
+                            raise RuntimeError("검사 대상 문서를 열지 못했습니다. 빈 화면 또는 다른 사이트로 이동했습니다.")
+                        document = await page.evaluate("""() => {
+                            const body = document.body;
+                            const walker = body && document.createTreeWalker(body, NodeFilter.SHOW_TEXT);
+                            let text = false, node;
+                            while (walker && (node = walker.nextNode())) {
+                                if (node.textContent.trim() && !node.parentElement.closest('script,style,noscript,template')) {
+                                    text = true; break;
+                                }
+                            }
+                            const media = body?.querySelectorAll('img,svg,canvas,video,iframe,object,embed').length || 0;
+                            const backgrounds = body && !text && !media && [body, ...body.querySelectorAll('*')]
+                                .slice(0, 5000).some(el => getComputedStyle(el).backgroundImage !== 'none');
+                            return {hasBody: !!body, text, media: media || Number(backgrounds)};
+                        }""")
+                        if not document['hasBody'] or not (document['text'] or document['media']):
+                            raise RuntimeError("본문과 이미지가 없는 빈 문서입니다. 정상 검사로 처리하지 않습니다.")
                         if attempts == 1:
                             site = origin(page.url)
                         elif origin(page.url) != site:
@@ -1266,7 +1310,7 @@ async def _evidence_screenshot(page, state, emit, *, target=None, location=None,
 _FRAME_PROBE = """el => {
     const parts = [];
     for (let node = el; node; node = node.parentElement) {
-        const tag = node.tagName.toLowerCase();
+        const tag = CSS.escape(node.tagName.toLowerCase());
         const siblings = node.parentElement ? [...node.parentElement.children].filter(n => n.tagName === node.tagName) : [node];
         parts.unshift(tag + ':nth-of-type(' + (siblings.indexOf(node) + 1) + ')');
         if (document.querySelectorAll(parts.join(' > ')).length === 1) break;
