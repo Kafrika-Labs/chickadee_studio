@@ -1,3 +1,5 @@
+import { t } from "./i18n.mjs";
+
 const risk = ['DRUGS', 'ACCOUNT_TRADE', 'GAMBLING', 'ADULT', 'LOAN', 'INVESTMENT', 'COMMERCIAL', 'AI_CONTEXT', 'IMAGE_REVIEW'];
 const unique = values => [...new Set(values.filter(Boolean))];
 
@@ -6,8 +8,8 @@ export function evidenceRole(source) {
   // Older captures called every heading a post title.
   if (role === 'title' && /(?:^| > )h[2-6](?=[:.# >]|$)/.test(source.location || '') &&
       !/(?:post-title|board-title|entry-title|article-title)/.test(source.location || '')) role = 'heading';
-  return ({title:'제목', heading:'소제목', comment:'댓글', body:'본문'})[role] ||
-    (['image_ocr','image_visual'].includes(source.source_kind) ? '이미지' : '텍스트');
+  return ({title:t("제목"), heading:t("소제목"), comment:t("댓글"), body:t("본문")})[role] ||
+    (['image_ocr','image_visual'].includes(source.source_kind) ? t("이미지") : t("텍스트"));
 }
 
 export function groupPageRecords(rows, details = {}) {

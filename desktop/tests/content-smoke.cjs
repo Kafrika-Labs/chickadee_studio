@@ -1,4 +1,6 @@
 // One backend entry point through the real preload/renderer, without new UI controls.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const packaged = Boolean(process.env.CHICKADEE_PACKAGED_EXE);
 const launch = packaged ? require('./native-app.cjs').launch : require('./source-ui-harness.cjs').launch;
 const assert = require('node:assert/strict');

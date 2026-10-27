@@ -21,6 +21,7 @@ const { LoginWindow } = require("./login.cjs");
 let loginWindow;
 let notifications, activeNotificationRun, schedules;
 const { Backend } = require("./backend.cjs");
+const { LANGUAGES, setLanguage, language, t } = require("./i18n.cjs");
 let window,
   backend,
   outputRoot,
@@ -30,6 +31,8 @@ let preferences = {};
 let preferenceWrites = Promise.resolve();
 app.setName("Chickadee");
 app.setAppUserModelId("org.chickadee.inspector");
+// A branded development executable is still launched through Electron default_app.
+const isPackaged = app.isPackaged && !process.defaultApp;
 const root = path.resolve(__dirname, "../..");
 const smoke = process.env.CHICKADEE_TEST_DATA;
 if (smoke) app.setPath("userData", smoke);
@@ -50,7 +53,7 @@ async function writePreferences(value, folder) {
   }
   if (folder !== undefined) next.outputRoot = folder;
   if (!value || typeof value !== "object")
-    throw new Error("설정 형식이 올바르지 않습니다.");
+    throw new Error(t("설정 형식이 올바르지 않습니다."));
   for (const key of [
     "url",
     "maxPages",
@@ -58,6 +61,7 @@ async function writePreferences(value, folder) {
     "profile",
     "livePreview",
     "scanInterval",
+    "language",
   ]) {
     if (!Object.hasOwn(value, key)) continue;
     const entry = value[key];
@@ -72,8 +76,10 @@ async function writePreferences(value, folder) {
               ? Number.isFinite(entry) && entry >= 0 && entry <= 30
               : key === "profile"
                 ? ["default", "test", "public"].includes(entry)
-                : typeof entry === "boolean";
-    if (!valid) throw new Error("검사 설정 값이 올바르지 않습니다.");
+                : key === "language"
+                  ? LANGUAGES.includes(entry)
+                  : typeof entry === "boolean";
+    if (!valid) throw new Error(t("검사 설정 값이 올바르지 않습니다."));
     next[key] = entry;
   }
   await fs.mkdir(app.getPath("userData"), { recursive: true });
@@ -81,6 +87,7 @@ async function writePreferences(value, folder) {
   await fs.writeFile(temporary, JSON.stringify(next, null, 2), "utf8");
   await fs.rename(temporary, preferencesPath());
   preferences = next;
+  setLanguage(preferences.language);
   return preferences;
 }
 function authorize(event) {
@@ -91,7 +98,7 @@ function authorize(event) {
     )
       throw new Error();
   } catch (_) {
-    throw new Error("허용되지 않은 앱 요청입니다.");
+    throw new Error(t("허용되지 않은 앱 요청입니다."));
   }
 }
 function handler(name, callback) {
@@ -100,6 +107,10 @@ function handler(name, callback) {
     return callback(...args);
   });
 }
+// Read synchronously by the preload so the first render already uses the saved language.
+ipcMain.on("desktop:language", (event) => {
+  event.returnValue = language();
+});
 async function initialize() {
   let restarting = false;
   handler("restart", async () => {
@@ -107,7 +118,7 @@ async function initialize() {
     const state = await backend.request("state");
     const agent = await backend.request("agent-status");
     if (state.running || agent.running)
-      throw new Error("진행 중인 검사·AI 검토를 중단한 뒤 재실행하세요.");
+      throw new Error(t("진행 중인 검사·AI 검토를 중단한 뒤 재실행하세요."));
     if (restarting) return;
     restarting = true;
     try {
@@ -121,14 +132,14 @@ async function initialize() {
   });
   handler("open-external", async (value) => {
     if (typeof value !== "string" || value.length > 8192)
-      throw new Error("잘못된 주소입니다.");
+      throw new Error(t("잘못된 주소입니다."));
     const url = new URL(value);
     if (
       !["http:", "https:"].includes(url.protocol) ||
       url.username ||
       url.password
     )
-      throw new Error("웹 주소만 열 수 있습니다.");
+      throw new Error(t("웹 주소만 열 수 있습니다."));
     await shell.openExternal(url.href);
   });
   notifications = new Notifications({
@@ -149,7 +160,7 @@ async function initialize() {
         : process.platform === "win32"
           ? "ms-settings:notifications"
           : null;
-    if (!target) throw new Error("운영체제 설정에서 알림을 확인하세요.");
+    if (!target) throw new Error(t("운영체제 설정에서 알림을 확인하세요."));
     await shell.openExternal(target);
   });
   preferences = await fs
@@ -162,6 +173,7 @@ async function initialize() {
     Array.isArray(preferences)
   )
     preferences = {};
+  setLanguage(preferences.language);
   outputRoot = path.join(app.getPath("documents"), "Chickadee", "results");
   if (
     typeof preferences.outputRoot === "string" &&
@@ -170,14 +182,20 @@ async function initialize() {
     outputRoot = preferences.outputRoot;
   if (smoke) outputRoot = path.join(smoke, "results");
   const area = screen.getPrimaryDisplay().workAreaSize;
+  // Windows Shell cannot read icons inside app.asar. Keep a real ICO available
+  // for taskbar pinning, including the unmodified compatibility runtime.
+  const appIcon = isPackaged
+    ? path.join(process.resourcesPath, "chickadee.ico")
+    : path.join(__dirname, "../assets/app.ico");
   window = new BrowserWindow({
+    show: false,
     width: Math.min(1530, area.width - 24),
     height: Math.min(990, area.height - 24),
     minWidth: Math.min(1120, area.width - 24),
     minHeight: Math.min(700, area.height - 24),
     backgroundColor: "#f2f4f6",
     title: "Chickadee",
-    icon: path.join(__dirname, "../assets/app.ico"),
+    icon: path.join(__dirname, "../assets/app-mark.png"),
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#242426", symbolColor: "#c9c9cf", height: 40 },
     webPreferences: {
@@ -189,13 +207,24 @@ async function initialize() {
       backgroundThrottling: false,
     },
   });
+  if (process.platform === "win32") {
+    window.setAppDetails({
+      appId: "org.chickadee.inspector",
+      appIconPath: appIcon,
+      appIconIndex: 0,
+      relaunchCommand: isPackaged
+        ? `"${process.execPath}"`
+        : `"${process.execPath}" "${app.getAppPath()}"`,
+      relaunchDisplayName: "Chickadee",
+    });
+  }
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.session.setPermissionRequestHandler(
     (_contents, _permission, callback) => callback(false),
   );
   window.webContents.session.setPermissionCheckHandler(() => false);
-  let executable = app.isPackaged
+  let executable = isPackaged
     ? path.join(
         process.resourcesPath,
         "engine",
@@ -206,10 +235,10 @@ async function initialize() {
     : process.platform === "win32"
       ? path.join(root, ".venv", "Scripts", "python.exe")
       : path.join(root, ".venv", "bin", "python");
-  let args = app.isPackaged
+  let args = isPackaged
     ? ["--data-dir", app.getPath("userData")]
     : ["-m", "chickadee.bridge", "--data-dir", app.getPath("userData")];
-  if (!app.isPackaged && process.platform === "darwin") {
+  if (!isPackaged && process.platform === "darwin") {
     args = [
       process.arch === "arm64" ? "-arm64" : "-x86_64",
       executable,
@@ -222,14 +251,14 @@ async function initialize() {
     executable,
     args,
     {
-      cwd: app.isPackaged ? process.resourcesPath : root,
+      cwd: isPackaged ? process.resourcesPath : root,
       env: {
         ...process.env,
         PYTHONIOENCODING: "utf-8",
         CHICKADEE_LAYA_CONFIG:
           process.env.CHICKADEE_LAYA_CONFIG ||
           path.join(app.getPath("userData"), "laya.json"),
-        ...(app.isPackaged
+        ...(isPackaged
           ? {
               CHICKADEE_LAYA_MODEL_DIR:
                 process.env.CHICKADEE_LAYA_MODEL_DIR ||
@@ -250,8 +279,8 @@ async function initialize() {
     (event) => {
       if (event.kind === "login_required" && Notification.isSupported()) {
         notifyLogin(
-          "Chickadee · 로그인 필요",
-          "검사를 일시 중지했습니다. 앱에서 로그인 창을 열어 주세요.",
+          t("Chickadee · 로그인 필요"),
+          t("검사를 일시 중지했습니다. 앱에서 로그인 창을 열어 주세요."),
           false,
         ).catch(() => {});
       }
@@ -304,7 +333,7 @@ async function initialize() {
   }));
   const startScan = async (options) => {
     if (!options || typeof options !== "object")
-      throw new Error("검사 설정이 필요합니다.");
+      throw new Error(t("검사 설정이 필요합니다."));
     const keys = [
       "url",
       "max_pages",
@@ -354,9 +383,13 @@ async function initialize() {
     handler(name, (value) => backend.request(name, value || {}));
   }
   handler("preferences", (value) => savePreferences(value));
+  handler("reload-language", async () => {
+    await preferenceWrites;
+    setImmediate(() => window.webContents.reload());
+  });
   handler("review", (value) => {
     if (!value || typeof value !== "object")
-      throw new Error("검토 항목이 필요합니다.");
+      throw new Error(t("검토 항목이 필요합니다."));
     const { ids, status, note, expected_revision } = value;
     return backend.request("review", {
       ids,
@@ -368,7 +401,7 @@ async function initialize() {
   });
   handler("load", async () => {
     const selected = await dialog.showOpenDialog(window, {
-      title: "검사 결과 불러오기",
+      title: t("검사 결과 불러오기"),
       filters: [{ name: "result.json", extensions: ["json"] }],
       properties: ["openFile"],
     });
@@ -382,7 +415,7 @@ async function initialize() {
   handler("history", async (id) => {
     const state = await backend.request("state");
     const entry = state.history.find((item) => item.id === id);
-    if (!entry) throw new Error("검사 기록을 찾을 수 없습니다.");
+    if (!entry) throw new Error(t("검사 기록을 찾을 수 없습니다."));
     const value = await backend.request("load", { path: entry.path });
     currentPath = value.path;
     return value;
@@ -398,12 +431,12 @@ async function initialize() {
   handler("export-report", async () => {
     const state = await backend.request("state");
     if (state.running || !state.run_id)
-      throw new Error("검사 완료 후 리포트를 저장하세요.");
+      throw new Error(t("검사 완료 후 리포트를 저장하세요."));
     const data = await backend.request("inspection", { run_id: state.run_id });
-    if (!data.review_report?.html) throw new Error("저장할 리포트가 없습니다.");
+    if (!data.review_report?.html) throw new Error(t("저장할 리포트가 없습니다."));
     const selected = await dialog.showSaveDialog(window, {
       defaultPath: "chickadee-review.html",
-      filters: [{ name: "HTML 리포트", extensions: ["html"] }],
+      filters: [{ name: t("HTML 리포트"), extensions: ["html"] }],
     });
     if (selected.canceled) return null;
     await fs.writeFile(selected.filePath, data.review_report.html, "utf8");
@@ -426,7 +459,7 @@ async function initialize() {
   });
   handler("copy", (text) => {
     if (typeof text !== "string" || text.length > 1000000)
-      throw new Error("복사할 내용이 너무 큽니다.");
+      throw new Error(t("복사할 내용이 너무 큽니다."));
     clipboard.writeText(text);
   });
   handler("save-workflow", async (value) => {
@@ -435,7 +468,7 @@ async function initialize() {
       typeof value !== "object" ||
       JSON.stringify(value).length > 100000
     )
-      throw new Error("워크플로 형식이 올바르지 않습니다.");
+      throw new Error(t("워크플로 형식이 올바르지 않습니다."));
     await fs.mkdir(path.dirname(workflowPath()), { recursive: true });
     const temporary = workflowPath() + ".tmp";
     await fs.writeFile(temporary, JSON.stringify(value, null, 2), "utf8");
@@ -448,10 +481,10 @@ async function initialize() {
       typeof value !== "object" ||
       JSON.stringify(value).length > 100000
     )
-      throw new Error("구성 형식이 올바르지 않습니다.");
+      throw new Error(t("구성 형식이 올바르지 않습니다."));
     const selected = await dialog.showSaveDialog(window, {
       defaultPath: "chickadee-workflow.json",
-      filters: [{ name: "검사 구성", extensions: ["json"] }],
+      filters: [{ name: t("검사 구성"), extensions: ["json"] }],
     });
     if (selected.canceled) return null;
     await fs.writeFile(
@@ -463,23 +496,24 @@ async function initialize() {
   });
   handler("load-workflow", async () => {
     const selected = await dialog.showOpenDialog(window, {
-      title: "워크플로 JSON 불러오기",
+      title: t("워크플로 JSON 불러오기"),
       filters: [{ name: "Workflow", extensions: ["json"] }],
       properties: ["openFile"],
     });
     if (selected.canceled) return null;
     const stat = await fs.stat(selected.filePaths[0]);
     if (stat.size > 100000)
-      throw new Error("워크플로는 100KB 이하여야 합니다.");
+      throw new Error(t("워크플로는 100KB 이하여야 합니다."));
     return JSON.parse(await fs.readFile(selected.filePaths[0], "utf8"));
   });
   window.webContents.on("before-input-event", (event, input) => {
-    if (input.key === "F12" && !app.isPackaged) {
+    if (input.key === "F12" && !isPackaged) {
       window.webContents.toggleDevTools();
       event.preventDefault();
     }
   });
   await window.loadFile(page);
+  window.show();
   try {
     const { startupGroqConfig } = require("./groq-env.cjs");
     const config = await startupGroqConfig(process.argv);
@@ -489,9 +523,9 @@ async function initialize() {
     dialog
       .showMessageBox(window, {
         type: "warning",
-        title: "Groq 설정 파일",
+        title: t("Groq 설정 파일"),
         message:
-          "지정한 파일의 GROQ_API_KEY를 확인하세요. 기본 OCR·ML 검사는 계속 사용할 수 있습니다.",
+          t("지정한 파일의 GROQ_API_KEY를 확인하세요. 기본 OCR·ML 검사는 계속 사용할 수 있습니다."),
       })
       .catch(() => {});
   }

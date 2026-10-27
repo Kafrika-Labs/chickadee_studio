@@ -1,0 +1,12 @@
+simulation: ai-review
+routing: path
+mocks:
+  - name: groq
+    routeKey: groq
+    path: postman/mocks/ai-review
+  - name: openai
+    routeKey: openai
+    path: postman/mocks/ai-review
+  - name: anthropic
+    routeKey: anthropic
+    path: postman/mocks/ai-review

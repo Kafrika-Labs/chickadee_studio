@@ -1,13 +1,13 @@
-# 예약 검사
+# Scheduled scans
 
-[한국어](scheduled-inspections.md) | [English](scheduled-inspections.en.md)
+[한국어](scheduled-inspections.ko.md) | [English](scheduled-inspections.md)
 
-설정 → 예약 검사에서 **예약 추가**를 누릅니다. 이름과 대상 URL을 입력하고 실행 시간 및 반복 주기(한 번만, 매일, 요일 반복)를 정한 뒤 저장합니다.
+Open Settings → Scheduled scans and choose **예약 추가** (Add schedule). Enter a name and URL, select a time and recurrence (once, daily or selected weekdays), then save.
 
-- 새 예약은 현재 검사 구성, 최대 페이지 수, 제한시간, 탐색 프로필, 미리보기 설정을 복사합니다. 이후 일반 설정 변경은 예약에 자동 적용되지 않습니다. 변경된 검사 구성을 사용하려면 새 예약을 추가합니다.
-- 이 컴퓨터의 시스템 시간을 사용합니다. 앱이 켜져 있고 컴퓨터가 깨어 있어야 합니다. OS 자동 실행이나 절전 해제는 등록하지 않습니다.
-- 예약은 5초 간격으로 확인합니다. 1분 이상 늦었거나 앱 재시작 전에 지난 일정은 건너뜁니다. 밀린 검사를 한꺼번에 실행하지 않습니다.
-- 다른 검사 또는 AI 검토가 실행 중이면 해당 일정을 건너뜁니다. 자동 재시도하지 않습니다. 최근 실행·건너뜀·시작 실패 상태는 예약 목록에 표시됩니다.
-- 실행 전에 해당 일정을 사용 처리하여 재시작으로 같은 예약이 반복 실행되는 것을 방지합니다. 이 사이 앱이 비정상 종료되면 해당 회차는 실행되지 않을 수 있습니다.
-- 결과는 실행 당시 지정된 결과 폴더에 저장되며 검사 기록에서 확인합니다. 완료 알림·Slack/Discord 리포트는 기존 알림 설정을 따릅니다. Grok 검토는 자동 실행하지 않습니다.
-- 예약 설정은 앱 데이터 폴더의 `schedules.json`에 저장됩니다. API 키와 웹훅은 예약 파일에 넣지 않습니다.
+- New schedules copy the current workflow, maximum pages, deadline, navigation profile and preview settings. Later general-setting changes do not update existing schedules; create a new schedule to use a changed workflow.
+- Schedules use the computer's system time. The app must be running and the computer awake. No OS startup or wake task is registered.
+- Schedules are checked every 5 seconds. Occurrences more than one minute late, or already past before app restart, are skipped without catch-up execution.
+- If another scan or AI review is running, the occurrence is skipped without automatic retry. The list shows the last run, skip or start failure.
+- An occurrence is marked consumed before execution to prevent duplicate runs after restart. A crash in this interval can leave that occurrence unexecuted.
+- Results use the output folder configured at execution time and appear in history. Existing desktop/Slack/Discord notification settings apply. Groq review is not started automatically.
+- Schedules are stored in `schedules.json` in the app data directory, without API keys or webhooks.

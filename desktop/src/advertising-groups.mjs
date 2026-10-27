@@ -1,3 +1,5 @@
+import { t } from "./i18n.mjs";
+
 // Review groups, not legal determinations. General includes untyped AI hits.
 const riskTopics = new Set(["GAMBLING", "ADULT", "DRUGS", "ACCOUNT_TRADE"]);
 export function advertisingGroup(record) {
@@ -29,9 +31,9 @@ export function normalizeVisualCandidates(rows, images = []) {
         other.url === row.url && other.image_id && other.image_id === row.image_id)) return [];
     return [{...row, category: 'IMAGE_REVIEW',
       evidence_text: /^(도박 이미지|성인물 이미지|마약 관련 이미지)$/.test(row.evidence_text || '')
-        ? '문자 근거 없는 이미지 · 검토 필요' : row.evidence_text,
-      reasons: ['사진 모델의 단독 신호로 남긴 이미지 검토 항목입니다.',
-        '광고 여부와 도박·성인·마약 주제는 확인되지 않았습니다.']}];
+        ? t("문자 근거 없는 이미지 · 검토 필요") : row.evidence_text,
+      reasons: [t("사진 모델의 단독 신호로 남긴 이미지 검토 항목입니다."),
+        t("광고 여부와 도박·성인·마약 주제는 확인되지 않았습니다.")]}];
   });
 }
 

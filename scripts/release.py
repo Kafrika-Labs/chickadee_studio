@@ -46,7 +46,8 @@ def version():
         raise ValueError("Python and desktop versions differ")
     if package["build"]["directories"]["output"] != f"../artifacts/electron-{value}":
         raise ValueError("Electron output path differs from release version")
-    if package["build"]["extraResources"][0]["from"] != f"../artifacts/engine-{value}/ChickadeeEngine":
+    engine_resources = [item for item in package["build"]["extraResources"] if item.get("to") == "engine"]
+    if len(engine_resources) != 1 or engine_resources[0]["from"] != f"../artifacts/engine-{value}/ChickadeeEngine":
         raise ValueError("Bundled engine path differs from release version")
     notes = ROOT / "docs/releases" / f"{value}.md"
     if not notes.is_file() or not notes.read_text(encoding="utf-8").strip():

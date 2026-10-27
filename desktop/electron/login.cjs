@@ -1,8 +1,9 @@
 const { randomUUID } = require('node:crypto');
+const { t } = require('./i18n.cjs');
 
 function webURL(value) {
   const url = new URL(value);
-  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error('웹 로그인 주소만 열 수 있습니다.');
+  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw new Error(t("웹 로그인 주소만 열 수 있습니다."));
   return url;
 }
 function playwrightCookie(cookie) {
@@ -29,7 +30,7 @@ class LoginWindow {
         name:cookie.name,value:cookie.value,domain:cookie.domain,path:cookie.path,secure:cookie.secure,httpOnly:cookie.httpOnly,
         ...(cookie.expires>0?{expirationDate:cookie.expires}:{}),sameSite:({Strict:'strict',Lax:'lax',None:'no_restriction'})[cookie.sameSite]||'lax'});
     }
-    const win=new this.BrowserWindow({width:1000,height:780,title:'사이트 로그인 · 완료 후 Chickadee에서 검사 재개',
+    const win=new this.BrowserWindow({width:1000,height:780,title:t("사이트 로그인 · 완료 후 Chickadee에서 검사 재개"),
       parent:this.owner(),autoHideMenuBar:true,webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
     this.current={requestId,window:win,session:isolated,target};
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -39,13 +40,13 @@ class LoginWindow {
     // Closing the login window never silently resumes the scanner.
     win.on('close',event=>{if(this.current?.window===win){event.preventDefault();win.hide();this.owner()?.show();this.owner()?.focus();}});
     try { await win.loadURL(target.href); }
-    catch { throw new Error('로그인 페이지를 열지 못했습니다. 로그인 창에서 연결 상태를 확인하세요.'); }
+    catch { throw new Error(t("로그인 페이지를 열지 못했습니다. 로그인 창에서 연결 상태를 확인하세요.")); }
   }
   async complete(requestId, skip=false) {
     const pending=await this.backend.request('login-session',{request_id:requestId});
     if(skip) { await this.backend.request('login-complete',{request_id:requestId,skip:true}); await this.close(requestId); return; }
     const current=this.current;
-    if(!current || current.requestId!==requestId) throw new Error('먼저 로그인 창을 열어 로그인해 주세요.');
+    if(!current || current.requestId!==requestId) throw new Error(t("먼저 로그인 창을 열어 로그인해 주세요."));
     const hostname=webURL(pending.requested_url).hostname;
     const cookies=(await current.session.cookies.get({})).filter(c=>{const domain=c.domain.replace(/^\./,'');return hostname===domain||hostname.endsWith('.'+domain);}).map(playwrightCookie);
     await this.backend.request('login-complete',{request_id:requestId,cookies});

@@ -1,4 +1,6 @@
 // Record the actual desktop pipeline against a local Korean fixture. No paid API calls.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const fs = require("node:fs/promises");
 const path = require("node:path");
 const http = require("node:http");

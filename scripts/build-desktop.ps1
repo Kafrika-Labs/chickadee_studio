@@ -1,11 +1,13 @@
-param([switch]$SkipInstall, [switch]$SkipEngine, [switch]$SkipLaya, [switch]$RequireSigned)
+param([switch]$SkipInstall, [switch]$SkipEngine, [switch]$SkipLaya, [switch]$RequireSigned, [string]$PythonPath = '.venv\Scripts\python.exe', [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $taskRoot = Split-Path -Parent $PSScriptRoot
 $taskVersion = (Get-Content -LiteralPath (Join-Path $taskRoot 'desktop/package.json') -Raw | ConvertFrom-Json).version
+if (-not $OutputDirectory) { $OutputDirectory = "artifacts/electron-$taskVersion" }
+$taskDesktopOutput = if ([IO.Path]::IsPathRooted($OutputDirectory)) { $OutputDirectory } else { Join-Path $taskRoot $OutputDirectory }
 Push-Location $taskRoot
 try {
-    $taskPython = Join-Path $taskRoot '.venv\Scripts\python.exe'
-    if (-not (Test-Path -LiteralPath $taskPython)) { throw 'Install requirements-dev.txt into .venv first.' }
+    $taskPython = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($PythonPath)
+    if (-not (Test-Path -LiteralPath $taskPython)) { throw 'Install requirements-dev.txt into the selected Python environment first.' }
     $env:PLAYWRIGHT_BROWSERS_PATH = '0'
     if (-not $SkipLaya) {
         $taskLayaPython = Join-Path $taskRoot 'artifacts/laya-venv/Scripts/python.exe'
@@ -40,12 +42,19 @@ try {
             if ($LASTEXITCODE -ne 0) { throw 'Desktop dependency installation failed.' }
         }
         $env:CSC_IDENTITY_AUTO_DISCOVERY = 'false'
-        if ($RequireSigned) { npm.cmd run package -- --config.win.signAndEditExecutable=true --config.forceCodeSigning=true }
-        else { npm.cmd run package }
+        # Reuse the installed official distribution. This also avoids the
+        # downloader's temporary-directory rename race on Windows.
+        $taskPackageOptions = @("--config.directories.output=$taskDesktopOutput")
+        if (Test-Path -LiteralPath 'node_modules/electron/dist/electron.exe') {
+            $taskPackageOptions += '--config.electronDist=node_modules/electron/dist'
+            $taskPackageOptions += '--config.afterExtract=build-tools/clean-electron-dist.cjs'
+        }
+        if ($RequireSigned) { $taskPackageOptions += @('--config.win.signAndEditExecutable=true', '--config.forceCodeSigning=true') }
+        npm.cmd run package -- @taskPackageOptions
         if ($LASTEXITCODE -ne 0) { throw 'Desktop package build failed.' }
     } finally { Pop-Location }
-    if (-not (Test-Path -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe")) { throw 'Desktop executable is missing: inspect the build log and free disk space.' }
-    if (-not (Test-Path -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/resources/engine/ChickadeeEngine.exe")) { throw 'Bundled scan engine is missing.' }
+    if (-not (Test-Path -LiteralPath "$taskDesktopOutput/win-unpacked/Chickadee.exe")) { throw 'Desktop executable is missing: inspect the build log and free disk space.' }
+    if (-not (Test-Path -LiteralPath "$taskDesktopOutput/win-unpacked/resources/engine/ChickadeeEngine.exe")) { throw 'Bundled scan engine is missing.' }
     if (-not $RequireSigned) {
         $taskRuntime = Get-Content -LiteralPath 'desktop/vendor-runtime.json' -Raw | ConvertFrom-Json
         $taskInstalledVersion = (Get-Content -LiteralPath 'desktop/node_modules/electron/package.json' -Raw | ConvertFrom-Json).version
@@ -69,11 +78,11 @@ try {
             } finally { $taskArchive.Dispose() }
         }
         $taskVendorHash = (Get-FileHash -LiteralPath $taskVendorExe -Algorithm SHA256).Hash.ToLowerInvariant()
-        $taskAppHash = (Get-FileHash -LiteralPath "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
+        $taskAppHash = (Get-FileHash -LiteralPath "$taskDesktopOutput/win-unpacked/Chickadee.exe" -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($taskInstalledVersion -ne $taskRuntime.version -or $taskVendorHash -ne $taskRuntime.executable_sha256) {
             throw 'The installed Electron runtime differs from the pinned official release.'
         }
-        $taskApp = Join-Path $taskRoot "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe"
+        $taskApp = Join-Path $taskDesktopOutput 'win-unpacked/Chickadee.exe'
         $taskProofJson = & node (Join-Path $PSScriptRoot 'verify-windows-runtime.cjs') $taskVendorExe $taskApp
         if ($LASTEXITCODE -ne 0) { throw 'Upstream runtime and ASAR integrity verification failed.' }
         $taskProof = $taskProofJson | ConvertFrom-Json
@@ -83,7 +92,7 @@ try {
             (Get-FileHash -LiteralPath $taskEditor -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskRuntime.icon_editor_sha256) {
             throw 'The app icon or icon editor differs from the pinned build inputs.'
         }
-        $taskApp = Join-Path $taskRoot "artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe"
+        $taskApp = Join-Path $taskDesktopOutput 'win-unpacked/Chickadee.exe'
         $taskVendorInfo = (Get-Item -LiteralPath $taskVendorExe).VersionInfo
         & $taskEditor $taskApp --set-icon $taskIcon
         if ($LASTEXITCODE -ne 0) { throw 'App icon update failed.' }
@@ -98,6 +107,6 @@ try {
            packaged_executable_sha256=$taskAppHash } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path (Split-Path $taskApp) 'resources/runtime-provenance.json') -Encoding utf8
         Write-Output "Chickadee icon applied; upstream runtime metadata retained: $taskAppHash"
     }
-    & (Join-Path $PSScriptRoot 'verify-windows-signatures.ps1') -AppDirectory "artifacts/electron-$taskVersion/win-unpacked" -AllNative:$RequireSigned -RequireTrusted:$RequireSigned
-    Write-Output "Built artifacts/electron-$taskVersion/win-unpacked/Chickadee.exe. Distribute the complete win-unpacked folder."
+    & (Join-Path $PSScriptRoot 'verify-windows-signatures.ps1') -AppDirectory "$taskDesktopOutput/win-unpacked" -AllNative:$RequireSigned -RequireTrusted:$RequireSigned
+    Write-Output "Built $taskDesktopOutput/win-unpacked/Chickadee.exe. Distribute the complete win-unpacked folder."
 } finally { Pop-Location }

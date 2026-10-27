@@ -1,4 +1,6 @@
 // Native packaged startup reads an explicitly supplied inert fixture key. Never runs an agent.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const {launch}=require('./native-app.cjs');
 const fs=require('node:fs/promises');
 const path=require('node:path');
@@ -32,8 +34,8 @@ const assert=require('node:assert/strict');
   await page.getByRole('button',{name:'AI 연결',exact:true}).click();
   await page.getByText('등록됨',{exact:true}).waitFor();
   await page.getByRole('button',{name:'API 키 등록',exact:true}).click();
-  assert.equal(await page.getByLabel('Groq API 키',{exact:true}).getAttribute('type'),'password');
-  assert.equal(await page.getByLabel('Groq API 키',{exact:true}).inputValue(),'');
+  assert.equal(await page.getByLabel('API 키',{exact:true}).getAttribute('type'),'password');
+  assert.equal(await page.getByLabel('API 키',{exact:true}).inputValue(),'');
   console.log(JSON.stringify({status:'passed',external_file_read:true,key_not_in_renderer:true,paid_calls:0}));
  }finally{await app.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

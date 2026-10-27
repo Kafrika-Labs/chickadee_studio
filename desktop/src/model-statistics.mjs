@@ -1,3 +1,5 @@
+import { t } from "./i18n.mjs";
+
 const count = (value) =>
   Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
 export function modelStatistics(data = {}) {
@@ -30,14 +32,14 @@ export function modelStatistics(data = {}) {
       analyzed: count(laya.analyzed),
       status:
         laya.status === "completed"
-          ? "적용"
+          ? t("적용")
           : laya.status === "partial" && count(laya.analyzed)
-            ? "일부 적용"
+            ? t("일부 적용")
             : laya.status === "unavailable"
-              ? "미적용"
+              ? t("미적용")
               : laya.status === "failed"
-                ? "분석 실패"
-                : "입력 없음",
+                ? t("분석 실패")
+                : t("입력 없음"),
       ...scores("laya"),
     },
     ocr: {
@@ -45,12 +47,12 @@ export function modelStatistics(data = {}) {
       total: count(ocr.images) + count(ocr.skipped),
       status:
         ocr.enabled === false
-          ? "꺼짐"
+          ? t("꺼짐")
           : !count(ocr.images) && !count(ocr.skipped)
-            ? "이미지 없음"
+            ? t("이미지 없음")
             : ocr.status === "partial"
-              ? "일부 완료"
-              : "완료",
+              ? t("일부 완료")
+              : t("완료"),
       values: [
         recognized,
         count(ocr.unreadable),

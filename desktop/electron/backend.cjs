@@ -1,5 +1,6 @@
 const { spawn } = require("node:child_process");
 const readline = require("node:readline");
+const { t } = require("./i18n.cjs");
 class Backend {
   constructor(executable, args, options, onEvent) {
     this.pending = new Map();
@@ -29,7 +30,7 @@ class Backend {
         } catch (error) {
           onEvent({
             kind: "error",
-            message: "엔진 응답을 읽지 못했습니다: " + error.message,
+            message: t("엔진 응답을 읽지 못했습니다: {error}", { error: error.message }),
           });
         }
       });
@@ -45,20 +46,20 @@ class Backend {
       if (!this.closing) onEvent({ kind: "error", message });
     };
     this.child.on("error", (error) =>
-      fail("검사 엔진을 시작하지 못했습니다: " + error.message),
+      fail(t("검사 엔진을 시작하지 못했습니다: {error}", { error: error.message })),
     );
     this.child.on("exit", (code) =>
-      fail(`검사 엔진 종료 (${code}). ${this.stderr.slice(-1200)}`),
+      fail(t("검사 엔진 종료 ({code}). {stderr}", { code, stderr: this.stderr.slice(-1200) })),
     );
   }
   request(method, params = {}) {
     return new Promise((resolve, reject) => {
       if (!this.child.stdin.writable)
-        return reject(new Error("검사 엔진에 연결되지 않았습니다."));
+        return reject(new Error(t("검사 엔진에 연결되지 않았습니다.")));
       const id = ++this.sequence;
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error("엔진 응답 시간이 초과되었습니다."));
+        reject(new Error(t("엔진 응답 시간이 초과되었습니다.")));
       }, 30000);
       this.pending.set(id, { resolve, reject, timer });
       this.child.stdin.write(JSON.stringify({ id, method, params }) + "\n");

@@ -1,13 +1,13 @@
-# 앱 업데이트와 탐색 속도
+# App updates and navigation speed
 
-[한국어](app-updates.md) | [English](app-updates.en.md)
+[한국어](app-updates.ko.md) | [English](app-updates.md)
 
-설정 → 업데이트에서 현재 버전과 GitHub 릴리스를 확인한다. 현재 공개 채널이 사전 공개 릴리스이므로 사전 공개 버전도 확인 대상에 포함하고 화면에 표시한다. 초안은 제외하고 숫자 버전 순서로 비교한다.
+Open Settings → Updates to check the current version and GitHub releases. The current public channel includes prereleases, which are labeled in the UI. Drafts are excluded and numeric versions are compared.
 
-현재 패키지는 Windows x64 ZIP이다. 업데이트 다운로드는 현재 OS·아키텍처에 맞는 ZIP과 SHA256 파일이 모두 있는 경우에만 제공한다. 다운로드한 파일의 길이와 SHA256을 검증한 뒤 파일 위치를 열 수 있다. 불완전한 다운로드는 삭제하고 기존 앱은 건드리지 않는다. macOS용 파일이 없는 릴리스는 다운로드할 수 없다.
+The package is a Windows x64 ZIP. Download is available only when both a ZIP matching the current OS/architecture and a SHA256 file exist. The app verifies byte length and SHA256 before offering to open the file location. Incomplete downloads are deleted; the installed app is unchanged. A release without macOS assets cannot be downloaded on macOS.
 
-자동 앱 교체나 재시작 설치는 지원하지 않는다. 앱을 종료하고 새 ZIP을 별도 폴더에 풀어 실행한다. 설치형 자동 업데이트를 제공하려면 별도 설치 패키지와 플랫폼별 서명·업데이트 배포 구성이 필요하다.
+Automatic replacement and restart installation are not supported. Close the app, extract the new ZIP to a separate folder and run it. Installer-based updates would require separate packages, platform signing and update distribution.
 
-설정 → 일반 → 탐색 속도는 다음 페이지로 넘어가기 전 대기 시간을 조절한다. 빠르게 0초, 보통 0.5초, 천천히 5초이며 슬라이더로 0~30초를 선택할 수 있다. 현재 페이지 처리 속도를 제한하거나 CPU 사용률을 제한하는 기능은 아니다. 대기 시간도 전체 제한시간에 포함되므로 긴 검사는 제한시간을 함께 늘린다. 값은 앱 설정에 저장되며 새 예약에 복사된다. 기존 예약은 저장 당시 구성을 유지한다.
+Settings → General → Navigation speed controls waiting before the next page: fast 0 seconds, normal 0.5 seconds, slow 5 seconds, or 0–30 seconds using the slider. It does not throttle current-page processing or CPU usage. Waiting counts toward the scan deadline, so increase the deadline for slower scans. The value persists and is copied into new schedules; existing schedules retain their saved configuration.
 
-구현 참고: [GitHub Releases API](https://docs.github.com/en/rest/releases/releases), [Electron shell API](https://www.electronjs.org/docs/latest/api/shell/).
+Implementation references: [GitHub Releases API](https://docs.github.com/en/rest/releases/releases), [Electron shell API](https://www.electronjs.org/docs/latest/api/shell/).

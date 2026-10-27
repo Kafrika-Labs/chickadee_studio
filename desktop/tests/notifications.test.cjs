@@ -1,3 +1,5 @@
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
@@ -6,9 +8,9 @@ const path = require('node:path');
 const { Notifications, validateWebhook, reportText } = require('../electron/notifications.cjs');
 const { randomBytes, createCipheriv, createDecipheriv } = require('node:crypto');
 const key = randomBytes(32);
-const crypto = { isEncryptionAvailable: () => true,
-  encryptString(text) { const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', key, iv); const bytes = Buffer.concat([cipher.update(text), cipher.final()]); return Buffer.concat([iv, cipher.getAuthTag(), bytes]); },
-  decryptString(bytes) { const cipher = createDecipheriv('aes-256-gcm', key, bytes.subarray(0, 12)); cipher.setAuthTag(bytes.subarray(12, 28)); return Buffer.concat([cipher.update(bytes.subarray(28)), cipher.final()]).toString(); },
+const crypto = { isAsyncEncryptionAvailable: async () => true,
+  async encryptStringAsync(text) { const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', key, iv); const bytes = Buffer.concat([cipher.update(text), cipher.final()]); return Buffer.concat([iv, cipher.getAuthTag(), bytes]); },
+  async decryptStringAsync(bytes) { const cipher = createDecipheriv('aes-256-gcm', key, bytes.subarray(0, 12)); cipher.setAuthTag(bytes.subarray(12, 28)); return { result: Buffer.concat([cipher.update(bytes.subarray(28)), cipher.final()]).toString(), shouldReEncrypt: false }; },
 };
 const slack = 'https://hooks.slack.com/services/TEST/TEST/not_a_real_webhook';
 const discord = 'https://discord.com/api/webhooks/123456/not_a_real_webhook';
@@ -23,21 +25,25 @@ test('encrypted settings, completion fan-out, deduplication and failure isolatio
     const calls = [], notices = [];
     const args = { directory, safeStorage: crypto, focused: () => true, notify: (...args) => notices.push(args), fetcher: async (url, options) => { calls.push({ url, options }); return { ok: !url.includes('discord'), status: 429 }; } };
     const service = new Notifications(args);
+    assert.equal((await service.state()).secureStorage, true);
     await service.save({ slack: true, discord: true, desktop: true, slackUrl: slack, discordUrl: discord });
     const stored = await fs.readFile(service.file, 'utf8'); assert.ok(!stored.includes('not_a_real_webhook'));
-    assert.ok(!JSON.stringify(service.state()).includes(slack));
+    assert.ok(!JSON.stringify(await service.state()).includes(slack));
     const restored = new Notifications(args); await restored.load();
     const event = { run_id: 'one', report: { status: 'completed', pages_scanned: ['https://private.example/secret'], ad_candidates: [{}] }, result: { findings: [{ text: 'SECRET_PAGE_TEXT' }] } };
     await restored.completed(event); await restored.completed(event);
     assert.equal(calls.length, 2); assert.equal(notices.length, 0);
-    assert.equal(restored.state().lastDelivery[0].success, true); assert.equal(restored.state().lastDelivery[1].success, false);
+    assert.equal((await restored.state()).lastDelivery[0].success, true); assert.equal((await restored.state()).lastDelivery[1].success, false);
     assert.equal(calls[0].options.redirect, 'error');
     assert.deepEqual(JSON.parse(calls[1].options.body).allowed_mentions, { parse: [] });
     assert.ok(!reportText(event).includes('private.example')); assert.ok(!reportText(event).includes('SECRET_PAGE_TEXT'));
     await restored.save({ slackRemove: true, discord: false, suppressFocused: false });
     await restored.completed({ ...event, run_id: 'two' }); assert.equal(calls.length, 2); assert.equal(notices.length, 1);
-    const insecure = new Notifications({ ...args, safeStorage: { isEncryptionAvailable: () => false } });
+    const insecure = new Notifications({ ...args, safeStorage: { isAsyncEncryptionAvailable: async () => false } });
+    assert.equal((await insecure.state()).secureStorage, false);
     await assert.rejects(insecure.save({ slackUrl: slack }));
+    const plaintext = new Notifications({ ...args, safeStorage: { ...crypto, getSelectedStorageBackend: () => 'basic_text' } });
+    await assert.rejects(plaintext.save({ slackUrl: slack }));
   } finally { await fs.rm(directory, { recursive: true, force: true }); }
 });
 

@@ -10,7 +10,7 @@ exports.launch = async ({ env }) => {
   const root = path.resolve(__dirname, "../..");
   const data = env.CHICKADEE_TEST_DATA;
   const { Notifications } = require('../electron/notifications.cjs');
-  const notifications = new Notifications({ directory: data, safeStorage: { isEncryptionAvailable: () => false }, supported: () => false });
+  const notifications = new Notifications({ directory: data, safeStorage: { isAsyncEncryptionAvailable: async () => false }, supported: () => false });
   await notifications.load();
   const dist = path.join(root, "desktop/dist");
   await fs.mkdir(data, { recursive: true });
@@ -59,6 +59,7 @@ exports.launch = async ({ env }) => {
         ".js": "text/javascript",
         ".css": "text/css",
         ".png": "image/png",
+        ".svg": "image/svg+xml",
         ".woff2": "font/woff2",
       };
       response.writeHead(200, {
@@ -70,10 +71,31 @@ exports.launch = async ({ env }) => {
       response.end();
     }
   });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  // Some Windows hosts transiently reject loopback listen with EFAULT. Retry
+  // server initialization only, before loading the UI or running assertions.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await new Promise((resolve, reject) => {
+        const failed = (error) => { server.off('listening', ready); reject(error); };
+        const ready = () => { server.off('error', failed); resolve(); };
+        server.once('error', failed); server.once('listening', ready);
+        server.listen(0, '127.0.0.1');
+      });
+      break;
+    } catch (error) {
+      if (error.code !== 'EFAULT' || attempt === 4) { await backend.close(); throw error; }
+      console.warn('Source UI server initialization retry:', error.code, attempt + 1);
+      await new Promise(resolve => setTimeout(resolve, 100 * 2 ** attempt));
+    }
+  }
   const origin = `http://127.0.0.1:${server.address().port}`;
   let updateStatus = 'idle';
   async function invoke(method, value) {
+    if (method === 'reloadLanguage') {
+      const language = env.CHICKADEE_LANGUAGE || preferences.language || 'ko';
+      setTimeout(() => page.goto(origin + '?language=' + encodeURIComponent(language)).catch(() => {}), 0);
+      return true;
+    }
     if (method === 'exportReport') {
       const selected = await dialog.showSaveDialog();
       if (selected.canceled) return null;
@@ -181,7 +203,7 @@ exports.launch = async ({ env }) => {
           "capabilities",
           "inspection", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "analyzeContent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
           "updateState", "checkUpdates", "downloadUpdate", "showUpdateFile", "openReleaseNotes",
-          "preferences",
+          "preferences", "reloadLanguage",
           "history",
           "load",
           "exportCSV",
@@ -198,6 +220,7 @@ exports.launch = async ({ env }) => {
           (value) => window.__sourceInvoke(method, value),
         ]),
       );
+      window.chickadee.language = new URLSearchParams(location.search).get('language') || 'ko';
       window.chickadee.onEvent = (callback) => {
         window.__sourceEvents ||= new Set();
         window.__sourceEvents.add(callback);
@@ -207,7 +230,7 @@ exports.launch = async ({ env }) => {
         };
       };
     });
-    await page.goto(origin);
+    await page.goto(origin + '?language=' + encodeURIComponent(env.CHICKADEE_LANGUAGE || preferences.language || 'ko'));
     return {
       firstWindow: async () => page,
       evaluate: async (callback, value) => callback({ dialog }, value),

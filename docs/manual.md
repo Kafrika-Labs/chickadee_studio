@@ -1,25 +1,25 @@
-# 실행·빌드 및 사용설명서
+# Running, building and using the Python edition
 
-[한국어](manual.md) | [English](manual.en.md)
+[한국어](manual.ko.md) | [English](manual.md)
 
-> 이 문서는 Python CLI·Tkinter 호환판 기준입니다. 현재 Windows Electron 앱은 [빠른 실행](quickstart-windows.md)과 [데스크톱 앱 안내](desktop.md)를 참고하세요.
+> This manual covers the Python CLI/Tkinter compatibility edition. For the current Windows Electron app, see [Quick start](quickstart-windows.md) and [Desktop guide](desktop.md).
 
-**결과 저장 위치:** 실행 파일 옆 `results` 폴더에 `result.json`, `result_extra.json`, `scan-report.json`, `result.csv`를 저장합니다. 소스 실행은 저장소의 `results`가 기본값입니다. 화면의 **저장 폴더 설정** 또는 `--output-dir`로 바꿀 수 있습니다. 파일은 실행 종료 시 교체됩니다. 일반 광고 문맥 검토 관측값은 `result_extra.json`, 보고서 `ad_candidates`, CSV에 담으며 불법 확정으로 바꾸지 않습니다. 현재 Electron 앱은 기본적으로 `문서/Chickadee/results/<실행별 폴더>`에 저장합니다. [고정 17개 칼럼](result-format.md)과 [빠른 실행](quickstart-windows.md)을 참고하세요.
+**Storage:** The executable writes `result.json`, `result_extra.json`, `scan-report.json` and `result.csv` into `results` beside the executable. Source runs default to the repository's `results`. Change this with the UI's output-folder setting or `--output-dir`. Files are replaced when a run ends. General-ad observations remain review candidates in `result_extra.json`, report `ad_candidates` and CSV, not confirmed illegal ads. Electron instead defaults to `Documents/Chickadee/results/<run folder>`. See [17 fixed columns](result-format.md).
 
-## Windows 실행 파일 사용
+## Windows executable
 
-1. `dist/ChickadeeBot` **폴더 전체**를 쓰기 가능한 폴더로 복사하거나 배포 압축 파일을 해제합니다. `_internal` 폴더도 필요합니다.
-2. `ChickadeeBot.exe`를 실행합니다. Python 설치·API 키·GPU는 필요하지 않습니다. 브라우저 엔진은 패키지에 포함됩니다.
-3. **로컬 데모 준비**를 누르고 **탐지 시작**을 누르면 가상 사이트를 점검합니다.
-4. 외부 사이트는 URL을 입력하고 **점검 시작**을 누릅니다. 별도 옵션이나 VM 설치는 필요하지 않습니다.
-5. 결과 행을 선택하면 원문·페이지 URL·요소 선택자를 확인할 수 있습니다. 오른쪽 유형 필터로 목록을 좁힐 수 있습니다.
-6. 완료 상태와 저장 안내를 확인하고 `result.json`을 사용합니다. **일부 결과·중단·실패** 상태에서는 `scan-report.json`의 누락·오류를 확인하세요.
+1. Copy the entire `dist/ChickadeeBot` folder or extract the distribution into a writable folder, including `_internal`.
+2. Run `ChickadeeBot.exe`. No Python, API key or GPU is needed; the browser is included.
+3. Choose **로컬 데모 준비** (Prepare local demo), then **탐지 시작** to inspect a simulated site.
+4. For an external site, enter its URL and start scanning. No VM or extra option is needed.
+5. Select a result for original text, page URL and selector. Use the technique filter to narrow results.
+6. Check completion and saving status before using `result.json`. For partial, cancelled or failed runs, inspect omissions/errors in `scan-report.json`.
 
-기본값은 화면에서 최대 100페이지(CLI는 50), 웹 탐색 300초, 페이지당 15초, 렌더링 대기 500ms, 페이지 사이 1초, 재시도 1회입니다. DOM 스냅샷을 스크롤·읽기 동작 전후로 검사합니다. 웹 탐색 제한시간은 최대 1800초입니다. 수집한 자료의 ML과 Laya 분석에는 별도의 최대 1800초를 배정합니다. 중단 시 수집된 결과와 완료한 분석을 저장합니다. `elapsed_sec`는 준비·탐색·로컬 분석·정리 시간을 포함하며 결과 파일을 쓰는 시간은 포함하지 않습니다.
+Defaults: UI 100 pages (CLI 50), collection 300 seconds, 15 seconds/page, 500 ms settle time, 1 second between pages and one retry. DOM snapshots are inspected before/after scrolling and read actions. The configurable collection deadline can be at most 1,800 seconds. Collected evidence receives a separate local analysis budget of up to 30 minutes. Stop remains available and saves collected results. Browser cleanup and disk writes can take extra time. `elapsed_sec` includes browser preparation, navigation, local analysis and cleanup but excludes output-file writing.
 
-## 소스에서 실행
+## Run from source
 
-검증 환경은 Windows 11 x64, Python 3.12입니다. 아래 명령은 저장소 폴더의 PowerShell에서 실행합니다.
+The reference environment is Windows 11 x64 with Python 3.12. In repository-root PowerShell:
 
 ```powershell
 py -3.12 -m venv .venv
@@ -29,64 +29,60 @@ $env:PLAYWRIGHT_BROWSERS_PATH = '0'
 .\.venv\Scripts\python.exe -m chickadee --demo
 ```
 
-`py`가 없으면 설치된 Python 3.12 실행 파일의 경로로 첫 명령을 바꿉니다. 가상환경 활성화 스크립트 실행은 필요하지 않습니다. 브라우저 설치는 최초 한 번 필요하며 실행 중에는 사용자의 Chrome 프로필이나 탭을 사용하지 않습니다.
-
-화면 없이 점검할 수도 있습니다.
+If `py` is unavailable, use the installed Python 3.12 path. Virtualenv activation is unnecessary. Install the browser once; scans do not use your Chrome profile or tabs.
 
 ```powershell
-# 로컬 데모: 가상 사이트 시작 -> 점검 -> 결과 저장 -> 사이트 종료
+# Start the local demo site, scan, save and stop the demo site.
 .\.venv\Scripts\python.exe -m chickadee --demo --cli --output-dir artifacts/demo
 
-# 실제 입력 URL 점검
+# Inspect a website.
 .\.venv\Scripts\python.exe -m chickadee --scan 'https://www.korea.kr/' --network --profile profiles/public-site.json --max-pages 3 --timeout 120 --interval 2 --output-dir artifacts/scan
 ```
 
-CLI 종료 코드는 완료 `0`, 일부 결과·중단 `2`, 실패 `1`입니다. 배포 실행 파일도 같은 인자를 지원하지만 콘솔 창이 없는 빌드이므로 결과 파일·실행 보고서로 확인합니다. 입력 오류로 실행되지 않으면 새 결과 파일은 생성하지 않습니다.
+Exit codes: completed `0`, partial/cancelled `2`, failed `1`. Packaged executables accept the same arguments but have no console; read result/report files. Invalid input that prevents startup creates no new results.
 
-## 실행 경계와 사이트별 설정
+## Request boundaries and profiles
 
-기본 실행은 외부 URL을 허용합니다. `--network`는 기존 명령과의 호환성을 위해 유지하며, `--local-only`를 지정하면 loopback 주소만 허용합니다. 검사 요청은 입력 origin과 `allowed_resource_origins`로 제한합니다. 미디어·폰트, WebSocket, GET/HEAD 이외의 요청을 차단합니다. 브라우저 프로필은 임시이고 서비스 워커·다운로드 수락을 끕니다. 이는 애플리케이션 수준의 요청 정책이며 OS/VM 네트워크 격리를 대신하지 않습니다. 브라우저 취약점·스크립트의 모든 부수 효과까지 막는 보장은 하지 않습니다.
+External URLs are allowed by default. `--network` remains for compatibility; `--local-only` permits loopback only. Requests are limited to the input origin and `allowed_resource_origins`. Media/fonts, WebSockets and methods other than GET/HEAD are blocked. The browser profile is temporary; service workers and downloads are disabled. This is an application request policy, not OS/VM isolation, and cannot prevent every browser vulnerability or script side effect.
 
-외부 CSS·스크립트·iframe이 차단되면 콘텐츠가 누락될 수 있어 `partial`로 기록합니다. 차단 내역을 검토하고 필요한 origin만 설정에 추가하세요. 인증서 오류는 무시하지 않습니다. 데이터가 바뀌는 GET 요청이나 버튼의 부수 효과는 요청 메서드만으로 완전히 판별할 수 없으므로 읽기 동작은 확인한 선택자만 설정합니다.
+Blocked external CSS/scripts/frames can omit content, producing `partial`. Review blocks and allow only needed origins. Certificate errors are not ignored. GETs/buttons may still change site state, so configure only verified read controls.
 
-`--profile profiles/public-site.json`은 기본 사이트 설정입니다. `profiles/read-controls.example.json`은 실제 선택자로 수정해야 하는 예시입니다.
+`profiles/public-site.json` supplies default settings. Adapt selectors in `profiles/read-controls.example.json` before use.
 
-- `path_prefix`: 링크 탐색 경로 범위. 쿼리 값은 보존합니다.
-- `controls`: 명시적으로 확인한 댓글 더보기·다음 페이지 등의 CSS 선택자. 한 요소에만 일치해야 합니다.
-- `max_actions`: 읽기 동작 상한(0~30). 폼 제출 컨트롤은 거부합니다.
-- `scroll_steps`: 스크롤 점검 상한(0~20). 콘텐츠가 계속 바뀌면 한도 도달을 보고합니다.
-- `allowed_resource_origins`: 필요한 외부 리소스 origin 배열. 기본값은 빈 배열입니다.
-- `content_selector`: 선택한 본문 안에서만 판정합니다. 해당 요소가 없는 목록 페이지도 링크는 수집합니다. 기본값 null은 전체 본문입니다. 사용자 제공 테스트 게시판에는 `profiles/inuri-test.json`을 사용합니다.
+| Setting | Meaning |
+| --- | --- |
+| `path_prefix` | Navigation path scope; query values are preserved |
+| `controls` | Verified CSS selectors for read actions such as more comments/next page; each must match one element |
+| `max_actions` | 0–30 read actions; form submission controls are rejected |
+| `scroll_steps` | 0–20 scroll checks; continuing changes at the cap are reported |
+| `allowed_resource_origins` | Required extra resource origins; empty by default |
+| `content_selector` | Analyze only the selected body; nonmatching list pages still supply links. Null means whole body; `profiles/inuri-test.json` covers the supplied test board |
 
-설정한 읽기 버튼은 DOM/URL이 바뀐 뒤 다시 검사합니다. POST 기반 댓글 API는 차단되므로 별도 지원 전에는 수집할 수 없습니다. 임의의 JavaScript나 Python을 설정 파일에 넣어 실행하는 기능은 없습니다.
+After a configured read action changes DOM/URL, inspection repeats. POST comment APIs are blocked until separately supported. Profiles cannot execute arbitrary JavaScript/Python.
 
-`--rules chickadee/rules.json`으로 탐지 사전을 교체합니다. `version`, `keywords`, `prevention`, `promotion` 배열 형식은 기본 파일을 참고하세요. 키워드 변형과 원문 위치를 함께 추적하고 원문은 정규화하지 않은 상태로 출력합니다.
+Use `--rules chickadee/rules.json` to replace the dictionary; follow its `version`, `keywords`, `prevention` and `promotion` structure. Keyword variants retain source spans and unnormalized output. Even short keywords need nearby promotional context. Prevention rules exclude prevention/reporting criticism and some legitimate product contexts. The default dictionary handles `ㅋr지노`, `ㅂr카라` and partial Jamo; homoglyph `CΟΜ`/`сом` is supporting evidence only alongside nearby advertising evidence. Textarea edit buffers are excluded. See [Research data](../research/README.md).
 
-키워드가 짧아도 근접한 문장에 `promotion` 권유 신호가 필요합니다. `prevention`은 예방·기사 비판·일부 정상 상품 문맥의 제외어입니다. 기본 사전은 `ㅋr지노`·`ㅂr카라`와 부분 자모를 처리하며, 같은 근접 문장의 광고 근거가 있을 때만 닮은꼴 `CΟΜ`·`сом`을 추가 근거로 기록합니다. textarea 편집 버퍼는 텍스트 수집에서 제외합니다. 데이터 출처는 [연구 자료](../research/README.md)에 정리했습니다.
+HTTP 429 from a page or asynchronous response stops retries/new requests and later pages for that origin, regardless of `--retries`. `stopped_origins` records cause URL, raw Retry-After and policy; status becomes partial/failed. Already-started requests may continue. Respect the server's wait/access policy before another run.
 
-HTTP 429를 페이지나 비동기 응답에서 받으면 해당 origin의 재시도·새 요청과 후속 페이지 수집을 중단합니다. `--retries`를 높여도 429에는 재시도하지 않습니다. 보고서 `stopped_origins`에 원인 URL·Retry-After 원문·정책을 기록하며 일부 결과/실패로 표시합니다. 이미 출발한 요청을 취소한다는 보장은 없습니다. 다시 실행하려면 서버가 요청한 대기와 접근 정책을 먼저 확인하세요.
+**결과 불러오기** (Import results) reads local JSON without visiting the web. It validates schema/duplicates and rejects mismatching report SHA-256. Results without reports can open but lack verified completion status. Files over 20 MB are rejected.
 
-화면의 **결과 불러오기**는 웹에 접속하지 않고 로컬 JSON만 읽습니다. 결과는 표준 스키마·중복 검사를 거치고, 함께 가져온 보고서의 SHA-256이 다르면 거부합니다. 보고서 없는 표준 결과도 열 수 있지만 실행 완료 여부를 확인할 수 없다고 표시합니다. 파일당 20MB를 넘으면 거부합니다.
+## Interpreting output
 
-## 출력 파일 해석
+PaddleOCR reads Korean text from PNG/JPEG/WebP/GIF and CSS background images on CPU. In suspected ads, select an image finding for the original image, boxes and line confidence; select a line to highlight it. Saved history restores the same evidence. Models are included in Windows packages; source environments prepare pinned models with `python scripts/prepare_ocr_models.py` after installing dependencies.
 
-게시글의 PNG·JPEG·WebP·GIF와 CSS 배경 이미지는 PaddleOCR로 한국어 글자를 읽습니다. **광고 의심**에서 항목을 선택하면 이미지와 글자 위치, 문구별 신뢰도를 확인할 수 있습니다. 문구를 누르면 해당 위치가 강조됩니다. 검사 기록에서도 같은 근거를 열 수 있습니다.
+`ocr_images` stores text, coordinates, confidence and source hashes; `ocr_summary` stores counts. Originals are in `evidence/images/`. OCR candidates use `source_kind=image_ocr` and `image_id`, retaining existing CSV columns.
 
-OCR은 CPU에서 실행하며 모델은 Windows 배포본에 포함됩니다. 별도 API 키나 유료 OCR 서비스가 필요하지 않습니다. 소스 실행에서는 의존성을 설치한 뒤 `python scripts/prepare_ocr_models.py`로 고정된 공식 모델을 준비하세요.
+- `result.json`: four text techniques, UTF-8 without BOM, `meta`/`findings`, including an empty array when no findings exist.
+- `scan-report.json`: `completed`, `partial`, `cancelled` or `failed`, visited/remaining pages, errors, limits and paths.
+- `evidence_details`: keywords/source spans, CSS/reasons, frame inheritance and read-action history. Reports also retain `rules_version`, `profile`, `retry_count` and `blocked_requests`.
+- `contextual_homoglyphs`: contextual COM variants and spans, separate from keyword transformations. CSS evidence records viewport/document coordinates, scrolling and contributing ancestor styles, distinguishing small boxes from small fonts and retaining measured values such as `opacity:0.003`.
+- `result_sha256` must match the bytes of `result.json`; interrupted writes can leave mismatched pairs.
+- `is_violation:true` denotes a rule-based suspected finding, not a legal determination.
+- Frame selectors record absolute `src`; resolve relative DOM attributes to absolute URLs when matching again.
 
-`scan-report.json`의 `ocr_images`에 원문·좌표·신뢰도·원본 해시가, `ocr_summary`에 처리 건수가 저장됩니다. 원본은 `evidence/images/`에 저장합니다. 이미지 광고는 `ad_candidates`에 `source_kind=image_ocr`, `image_id`와 함께 기록하며 CSV의 기존 칼럼을 사용합니다.
+Permission failures/full disks show save errors. Do not mistake previous files for new results. Existing files are not deleted before a run; successful/partial saves replace them.
 
-- `result.json`: 문자 위장·은닉 4종 결과만 담습니다. UTF-8(BOM 없음), 최상위 `meta`, `findings` 구조입니다. 0건도 빈 배열을 저장합니다.
-- `scan-report.json`: `completed`, `partial`, `cancelled`, `failed` 상태, 점검한 페이지, 남은 페이지 수, 누락·오류, 실행 제한과 출력 경로를 담습니다.
-- `evidence_details`: 항목별 일치 키워드·원문 위치, CSS 값·판정 이유, 프레임 상속 상태와 읽기 동작 기록입니다. `rules_version`, `profile`, `retry_count`, `blocked_requests`도 보고서에 기록합니다.
-- `contextual_homoglyphs`: 키워드 자체의 변형과 구분한 문맥 내 닮은꼴 COM의 원문·span입니다. CSS 근거에는 viewport·문서 좌표·스크롤 위치와 은닉에 기여한 조상 스타일을 기록합니다. 작은 상자와 글자 크기를 구분하고 opacity:0.003 같은 실측 값은 그대로 유지합니다.
-- 보고서의 `result_sha256`이 `result.json` 바이트의 SHA-256과 일치하면 같은 실행의 파일 쌍입니다. 쓰기 도중 장애가 나면 파일 쌍이 맞지 않을 수 있습니다.
-- `is_violation: true`는 규칙에 걸린 의심 항목을 뜻합니다. 법적 판단을 대신하지 않습니다.
-- iframe 선택자의 `src`는 절대주소로 기록합니다. 상대주소 iframe을 재조회할 때는 실제 `src` 속성도 절대주소로 해석하여 비교해야 합니다.
-
-폴더 쓰기 권한이 없거나 디스크가 가득 차면 화면에 저장 실패를 표시합니다. 이전 파일을 이번 실행 결과로 사용하지 마세요. 새 실행 전 파일은 자동 삭제하지 않으며 정상 또는 일부 결과를 저장할 때 교체합니다.
-
-## 테스트와 Windows 빌드
+## Tests and Windows build
 
 ```powershell
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
@@ -94,9 +90,7 @@ OCR은 CPU에서 실행하며 모델은 Windows 배포본에 포함됩니다. �
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build.ps1
 ```
 
-결과는 `dist/ChickadeeBot/ChickadeeBot.exe`입니다. 빌드는 Windows에서 수행하며 전체 폴더를 전달해야 합니다. 최초 브라우저 설치·빌드에는 네트워크 연결이 필요합니다. PyInstaller는 설치된 Playwright의 브라우저 파일을 수집하므로 다른 브라우저까지 추가 설치한 개발 환경에서는 패키지가 커질 수 있습니다.
-
-실행 파일 확인 예시:
+Output: `dist/ChickadeeBot/ChickadeeBot.exe`. Build on Windows and distribute the entire folder. Initial browser installation/build requires network access. PyInstaller collects installed Playwright browsers; extra browsers can enlarge the package.
 
 ```powershell
 $taskRun = Start-Process -FilePath '.\dist\ChickadeeBot\ChickadeeBot.exe' -ArgumentList '--demo --cli --output-dir artifacts/frozen-demo' -WindowStyle Hidden -Wait -PassThru

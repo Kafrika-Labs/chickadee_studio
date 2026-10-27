@@ -14,6 +14,8 @@ async function invoke(channel, ...args) {
 contextBridge.exposeInMainWorld(
   "chickadee",
   Object.freeze({
+    language: ipcRenderer.sendSync("desktop:language"),
+    reloadLanguage: () => invoke("desktop:reload-language"),
     openLogin: requestId => invoke("desktop:login-open", requestId),
     completeLogin: requestId => invoke("desktop:login-complete", requestId),
     skipLogin: requestId => invoke("desktop:login-skip", requestId),

@@ -1,3 +1,5 @@
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 test('advertising groups separate review topics without treating every loan as illegal', async () => {

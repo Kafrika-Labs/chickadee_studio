@@ -1,3 +1,5 @@
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const assert=require('node:assert/strict'),http=require('node:http'),path=require('node:path'),fs=require('node:fs');
 (async()=>{
  const server=http.createServer((req,res)=>{

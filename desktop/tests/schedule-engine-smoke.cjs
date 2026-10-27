@@ -1,4 +1,6 @@
 // Local-only scheduled scan through the real Python backend; no webhooks or AI.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const { Schedules } = require('../electron/schedules.cjs');
 const { Backend } = require('../electron/backend.cjs');
 const { pathToFileURL } = require('node:url');

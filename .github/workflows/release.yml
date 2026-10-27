@@ -126,6 +126,10 @@ jobs:
         run: |
           npm run smoke
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/language-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tests/ai-provider-smoke.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/inspection-smoke.cjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           node tests/local-ai-results-smoke.cjs
@@ -194,5 +198,5 @@ jobs:
             "release-assets/Chickadee-Studio-$APP_VERSION-win-x64.zip" \
             "release-assets/Chickadee-Studio-$APP_VERSION-win-x64.zip.sha256" \
             --repo "$GH_REPO" --target "$GITHUB_SHA" \
-            --title "$APP_VERSION" \
+            --title "Release v$APP_VERSION" \
             --notes-file "docs/releases/$APP_VERSION.md" --latest

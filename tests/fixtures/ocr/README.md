@@ -1,8 +1,10 @@
-[한국어](README.md) | [English](README.en.md)
+# Korean OCR regression fixtures
 
-자체 제작한 한국어 OCR 회귀 검사용 이미지입니다. 실제 광고 사이트의 캡처나 학습 데이터가 아닙니다.
+[한국어](README.ko.md) | [English](README.md)
 
-- promotion.png: `카지노 가입 보너스 지급` / `신규 회원 지금 가입하세요`
-- benign.png: `공공 도서관 독서 행사 안내` / `누구나 참여할 수 있습니다`
+These images were created for regression checks. They are not captures of real advertising sites or training data.
 
-900×240 흰 배경에 맑은 고딕으로 렌더링했습니다. 원문 인식·정상 문맥 제외·좌표 표시·저장 후 재열기를 검증합니다.
+- `promotion.png`: `카지노 가입 보너스 지급` / `신규 회원 지금 가입하세요` (casino sign-up bonus / sign up now).
+- `benign.png`: `공공 도서관 독서 행사 안내` / `누구나 참여할 수 있습니다` (public-library reading event / everyone can participate).
+
+Rendered with Malgun Gothic on a 900 × 240 white background. They validate recognition, benign-context exclusion, coordinate display and reopening saved evidence.

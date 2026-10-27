@@ -1,14 +1,14 @@
-# 위장·은닉 광고 사례 데이터
+# Obfuscated and hidden advertising examples
 
-[한국어](README.md) | [English](README.en.md)
+[한국어](README.ko.md) | [English](README.md)
 
-전체 43건: 직접 관찰 광고 의심 15건, 정상 대조군 23건, 간접 문헌 5건입니다.
+43 cases: 15 directly observed suspected ads, 23 benign controls and 5 secondary reports.
 
-- `samples.jsonl`: 광고 의심 사례 및 간접 문헌. `sample_origin`으로 구분합니다.
-- `negatives.jsonl`: 정상 대조군.
-- [sources.md](sources.md): 사례별 공개 출처와 관측 상태.
-- `import-manifest.json`: JSON·JSONL 데이터의 파일 크기와 SHA-256.
+- `samples.jsonl`: suspected ads and secondary reports, distinguished by `sample_origin`.
+- `negatives.jsonl`: benign controls.
+- [Sources](sources.md): public source URLs and observation status.
+- `import-manifest.json`: sizes and SHA-256 for JSON/JSONL data files.
 
-`dom_verified`는 HTML의 문자·요소·명시 스타일을 확인한 상태입니다. 렌더링된 계산 CSS·좌표를 측정했다는 뜻은 아닙니다. `visible_only`는 공개 텍스트 관측, `reported_only`는 간접 문헌입니다. 각 레코드의 관측 상태·출처 그룹·제외 사유를 함께 사용합니다.
+`dom_verified` means HTML text, elements and explicit styles were checked; it does not mean rendered computed CSS or coordinates were measured. `visible_only` means public-text observation; `reported_only` means secondary reporting. Use each record's status, source group and exclusion reason together.
 
-정규화 전 원문을 유지하며, 실제 관측과 간접 문헌을 같은 정답으로 합치지 않습니다. 이 데이터는 앱 출력 `result.json`과 별도의 회귀검증 형식입니다.
+Preserve original text before normalization and do not merge direct observations and secondary reports into one ground truth. This regression-data format is separate from the app's `result.json`.

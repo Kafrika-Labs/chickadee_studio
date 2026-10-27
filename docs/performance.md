@@ -1,48 +1,48 @@
-# 탐색 성능과 다음 개선 (2026-10-20)
+# Navigation performance and next steps (2026-10-20)
 
-[한국어](performance.md) | [English](performance.en.md)
+[한국어](performance.ko.md) | [English](performance.md)
 
-0.4.2는 게시판과 상세 글을 먼저 방문합니다. 일반 메뉴를 따라가는 동안 결과가 없는 것처럼 보였던 문제를 줄였습니다. 이는 첫 결과와 제한 내 콘텐츠 방문 범위를 개선하는 변경이며, 전체 사이트의 처리 속도가 일정 배수로 빨라졌다는 뜻은 아닙니다.
+Version 0.4.2 prioritizes boards and detail posts, reducing the delay before findings appear while traversing general menus. This improves time to first result and coverage within limits; it is not a claim of a fixed full-site speedup. This is a historical measurement; current image support is described in [Content analysis](content-analysis.md).
 
-## 사용자 제공 모의 사이트 비교
+## Supplied mock-site comparison
 
-대상은 `http://113.198.66.73:18244/`입니다. Windows의 동일한 소스 실행 경로에서 `--settle-ms 100 --interval 0.15 --timeout 150`으로 순차 실행했습니다. 네트워크·서버·로컬 부하는 통제하지 않았고, 반복 측정의 평균이나 백분위 값이 아닙니다. GUI 기본 대기값으로 측정한 수치도 아닙니다.
+Target: `http://113.198.66.73:18244/`. Sequential Windows source runs used `--settle-ms 100 --interval 0.15 --timeout 150`. Network/server/local load was uncontrolled. Values are individual runs, not repeated averages/percentiles or GUI-default timings.
 
-| 측정 | 기존 FIFO / 100페이지 제한 | 콘텐츠 우선 / 100페이지 제한 |
+| Measurement | FIFO, 100-page cap | Content-first, 100-page cap |
 | --- | ---: | ---: |
-| 첫 광고 후보 관측 | 51.972초 | 3.534초 |
-| 상세 글 방문 | 54개 | 60개 |
-| HTML 페이지 방문 | 99개 | 100개 |
-| 실행 시간 | 115.062초 | 120.422초 |
-| 종료 상태 | 일부 결과 | 일부 결과 |
+| First ad candidate | 51.972 s | 3.534 s |
+| Detail posts visited | 54 | 60 |
+| HTML pages visited | 99 | 100 |
+| Run time | 115.062 s | 120.422 s |
+| Status | Partial | Partial |
 
-기존 실행은 로그인·검색·자료실을 먼저 방문했고 JSON API 링크도 HTML 검사 대상으로 처리했습니다. 개선 실행은 게시판과 상세 글을 먼저 방문했습니다. 두 실행 모두 100페이지 제한으로 종료했으므로 전체 사이트 수집 완료를 의미하지 않습니다. 개선 직후 원시 후보 16건에는 목록 제목 4건의 중복이 포함됐습니다.
+FIFO visited login/search/resource pages first and treated JSON API links as HTML targets. Content-first visited boards/posts first. Both stopped at the page cap, not full-site completion. The initial 16 raw candidates included four duplicate list titles.
 
-목록·상세 후보 통합까지 적용한 최종 실행은 **70페이지·74.047초, 상세 글 60개, 첫 후보 3.465초, 일반 광고 검토 후보 12건**입니다. 목록에서 관측한 4건은 상세 후보의 `summary_observations`에 보존했습니다. 게시글 번호 5·10·15·20·25·30·35·40·45·50·55·60입니다. 다른 상세 글에 같은 문구가 있어도 별개 게시글로 유지합니다.
+After list/detail consolidation, the final run recorded **70 pages, 74.047 seconds, 60 detail posts, first candidate at 3.465 seconds and 12 general-ad candidates**. Four list observations remain in detail candidates' `summary_observations`. Post IDs were 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55 and 60. Identical text on different posts remains separate.
 
-이 최종 실행도 **페이지 제한으로 `partial`**입니다. 상세 글 60개를 방문했지만 나머지 일반 메뉴는 대기열에 남아 있습니다. 필수 위장·은닉 4종은 0건이며, 일반 광고 후보와 별도로 저장합니다. 관리자 정답 API·로그인·초기화 기능은 사용하지 않았으므로 12건을 공인 정확도나 재현율로 표현하지 않습니다.
+The final run was still **`partial` due to the page cap**; general menus remained queued. The four obfuscation/hiding techniques had zero findings, separate from general candidates. No administrator answer API, login or reset was used; 12 candidates is not a certified accuracy/recall result.
 
-[실제 결과 폴더](../examples/test-site-2026-10-20/)에서 CSV·JSON·보고서를 확인할 수 있습니다. GUI에서는 이 폴더의 `result.json`을 불러옵니다. `scan-report.json`을 같은 폴더에 두어야 후보와 탐색 기록이 함께 로드됩니다.
+Open the [saved results](../examples/test-site-2026-10-20/) for CSV/JSON/report data. Import `result.json` in the UI and keep `scan-report.json` alongside it to restore candidates/navigation.
 
 ```powershell
 .\.venv\Scripts\python.exe -m chickadee --scan 'http://113.198.66.73:18244/' --max-pages 70 --timeout 150 --settle-ms 100 --interval 0.15 --verbose --output-dir artifacts/verify-root
 ```
 
-게시판 범위만 검사하려면 주소를 `/parents/board/index.do?menu_idx=8&manage_idx=106`으로 바꾸고 `--profile profiles/inuri-test.json --max-pages 100`을 지정합니다. 이 설정은 `.post-detail` 본문만 판정하면서 목록 링크를 계속 탐색합니다.
+For board-only scope, use `/parents/board/index.do?menu_idx=8&manage_idx=106` with `--profile profiles/inuri-test.json --max-pages 100`. This analyzes `.post-detail` while continuing listing-link discovery.
 
-## 현재 지원 범위
+## Supported scope at the time
 
-- 실제 DOM의 링크, `data-url`·`data-href`·`data-link`, 문자열 리터럴로 된 단순 `location.href` 대입·`location.assign/replace` 주소를 수집합니다. 코드 문자열을 평가하거나 임의 함수의 인자를 추측하지 않습니다.
-- URL의 글 ID와 쿼리를 유지하며 같은 출처의 발견된 경로만 방문합니다. 브루트포스로 엔드포인트를 추측하는 기능은 없습니다.
-- 페이지별 링크 발견·새 대기·요소 관측·본문 선택자 일치 여부·소요 시간을 GUI 실행 기록과 `page_diagnostics`에 남깁니다.
-- 일반 광고 후보는 규칙 기반 검토 대상입니다. 필수 기법 코드와 법적 불법성 판정을 임의로 붙이지 않습니다.
+- Collect DOM links, `data-url`, `data-href`, `data-link`, and literal `location.href` assignments or `location.assign/replace` URLs. Do not evaluate code strings or guess arbitrary function arguments.
+- Preserve post IDs/queries and visit discovered same-origin paths, without guessing endpoints.
+- Record links, new queue entries, element observations, body-selector matches and duration in UI events and `page_diagnostics`.
+- Treat ordinary ad candidates as rule-based review targets, without invented technique codes or legal determinations.
 
-## 다음 개선 우선순위
+## Improvement priorities recorded at the time
 
-1. **별도 정답셋 평가:** 사이트·문구를 분리한 검증셋에서 기법별 정밀도·재현율과 정상 글 오탐을 측정해야 합니다. 조사 자료나 현재 모의 사이트만으로 일반 성능을 주장할 수 없습니다.
-2. **문맥 판정 보강:** 현재는 키워드·권유어·URL·기사/예방 문맥 규칙입니다. 문장과 댓글을 분리하고 애매한 후보를 검토 우선순위로 정렬하는 방향이 유효합니다.
-3. **동적 탐색 확대:** 임의 JS 함수로만 이동하는 게시판, 설정되지 않은 더보기·댓글 버튼, closed Shadow DOM은 누락될 수 있습니다. 사이트별 읽기 설정과 검증 fixture를 늘리는 작업이 필요합니다.
-4. **처리량 개선:** 현재 한 페이지씩 검사합니다. 페이지별 브라우저·DOM 분석 시간을 더 세분화해 병목을 측정한 뒤 제한된 병렬 처리를 검토할 수 있습니다. 이번 변경에 병렬 수집은 포함하지 않았습니다.
-5. **이미지 광고:** 현재 이미지·미디어·폰트 요청을 차단하므로 이미지 안의 글자·canvas 광고는 탐지하지 못합니다. OCR은 별도 수집·검증 경로가 필요합니다.
+1. Evaluate precision/recall and benign false positives on a separate labeled dataset split by site/text. Research examples and one mock site do not establish general performance.
+2. Improve sentence/comment context beyond keywords, promotional terms, URLs and prevention/news rules; prioritize ambiguous cases for review.
+3. Expand verified read profiles/fixtures for arbitrary-JS navigation, unconfigured more/comment controls and closed Shadow DOM omissions.
+4. Measure browser/DOM bottlenecks before considering bounded parallel collection. This change still scanned one page at a time.
+5. Add a separately validated OCR path. At that time image/media/font requests were blocked and image/canvas text was not detected; later releases added OCR.
 
-Windows 앱은 Docker나 VM 없이 실행합니다. 저장소의 `deploy/`, `scripts/scan-isolated.ps1`은 개발자가 선택해 사용하는 별도 검사 경로이며 앱 실행에 필요하지 않습니다.
+The Windows app needs no Docker/VM. `deploy/` and `scripts/scan-isolated.ps1` are optional developer paths.

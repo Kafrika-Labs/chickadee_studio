@@ -1,13 +1,15 @@
 // Refresh documentation from the actual desktop app and its bundled demo.
 // Uses isolated test data; does not call external AI or notification services.
-const {launch} = require('./native-app.cjs');
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
+const {launch} = require(process.argv.includes('--source') ? './source-ui-harness.cjs' : './native-app.cjs');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 (async () => {
  const root=path.resolve(__dirname,'../..');
  const guide=path.join(root,'desktop/assets/guide'), docs=path.join(root,'docs/assets/screenshots');
  await fs.mkdir(docs,{recursive:true});
- const app=await launch({args:[path.join(root,'desktop')],env:{...process.env,CHICKADEE_TEST_DATA:path.join(require('node:os').tmpdir(),'chickadee-docs-'+Date.now())}});
+ const app=await launch({args:[path.join(root,'desktop')],env:{...process.env,CHICKADEE_TEST_DATA:path.join(root,'artifacts','capture-docs-'+Date.now())}});
  try {
   const page=await app.firstWindow(); page.setDefaultTimeout(20000);
   await page.setViewportSize({width:1440,height:900});
@@ -37,6 +39,7 @@ const fs = require('node:fs/promises');
   await page.locator('.react-flow__controls-fitview').click();
   await capture('analysis');
   await page.getByRole('tab',{name:'AI 검토',exact:true}).click();
+  await capture('ai-review');
   await capture('ai-review',docs);
   await button('탐색 경로').click(); await capture('navigation',docs);
   await button('진행 기록').click(); await button('HTTP 통신').click();

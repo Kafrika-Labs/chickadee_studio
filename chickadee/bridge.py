@@ -135,7 +135,7 @@ class DesktopBridge:
             return {'started': True}
         if method == 'capabilities':
             return {**capabilities(), 'agent_available': True, 'agent_connected': self.agent_config is not None,
-                    'providers': ['groq']}
+                    'providers': ['groq', 'openai', 'anthropic']}
         if method in ('inspection', 'agent-configure', 'agent-run', 'agent-stop', 'agent-status'):
             return self._inspection_command(method, params)
         if method == 'tool-call':
@@ -338,11 +338,15 @@ class DesktopBridge:
         if method == 'agent-configure':
             if self.agent_worker and self.agent_worker.is_alive():
                 raise ValueError('에이전트 종료 후 설정을 변경하세요.')
-            self.agent_config = agent_settings({**params, 'api_key': params.get('api_key') or
-                                                 (self.agent_config or {}).get('api_key', '')})
-            return {'configured': True, 'provider': 'groq', **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
+            previous = self.agent_config or {}
+            provider = params.get('provider', previous.get('provider', 'groq'))
+            same_provider = provider == previous.get('provider', 'groq')
+            self.agent_config = agent_settings({**params, 'provider': provider,
+                'api_key': params.get('api_key') or (previous.get('api_key', '') if same_provider else '')})
+            return {'configured': True, 'provider': (self.agent_config or {}).get('provider', 'groq'), **{k: v for k, v in self.agent_config.items() if k != 'api_key'}}
         if method == 'agent-status':
-            return {'provider': 'groq', 'configured': self.agent_config is not None,
+            return {'provider': (self.agent_config or {}).get('provider', 'groq'), 'configured': self.agent_config is not None,
+                    'model': (self.agent_config or {}).get('model'),
                     'running': bool(self.agent_worker and self.agent_worker.is_alive()),
                     'ledger': self.agent_data.get('ledger', {}), 'assessments': self.agent_data.get('assessments', []),
                     'report': self.agent_data.get('report'),
@@ -374,7 +378,7 @@ class DesktopBridge:
                 source = next((n for n in graph['nodes'] if visit['source_evidence_id'] in n.get('packet_ids', [])), None)
                 target = next((n for n in visit['graph']['nodes'] if n['kind'] == 'page'), None)
                 if source and target:
-                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'Groq 추가 확인'})
+                    edges.append({'id': prefix + 'followup', 'source': source['id'], 'target': prefix + target['id'], 'label': 'AI 추가 확인'})
                 packets.update((p['id'], {**p, 'supplemental': True, 'snapshot_id': prefix + (p.get('snapshot_id') or ''),
                                          'image_id': prefix+p['image_id'] if p.get('image_id') else None}) for p in visit['packets'] if p['id'] not in packets)
                 ocr_images.extend({**image, 'id': prefix+image['id']} for image in visit.get('ocr_images', []))
@@ -404,7 +408,7 @@ class DesktopBridge:
                 self.agent_data['report'] = {'total': len(packets), 'completed': 0, 'status': 'running', 'assessments': []}
                 self.agent_worker = Thread(target=self._run_agent_report, args=(config, packets), daemon=True)
                 self.agent_worker.start()
-                return {'started': True, 'provider': 'groq', 'scope': 'all'}
+                return {'started': True, 'provider': (self.agent_config or {}).get('provider', 'groq'), 'scope': 'all'}
             packet = next((p for p in self.outcome.report.get('evidence_packets', []) if p['id'] == params.get('evidence_id')), None)
             if packet is None:
                 raise ValueError('검토할 내용을 찾지 못했습니다. 검사 기록을 다시 열어 주세요.')
@@ -412,7 +416,7 @@ class DesktopBridge:
             self.agent_stop = Event()
             self.agent_worker = Thread(target=self._run_agent, args=(config, packet), daemon=True)
             self.agent_worker.start()
-            return {'started': True, 'provider': 'groq', 'evidence_id': packet['id']}
+            return {'started': True, 'provider': (self.agent_config or {}).get('provider', 'groq'), 'evidence_id': packet['id']}
         raise ValueError('지원하지 않는 검사 확장 명령입니다.')
 
     def _analyze_content(self, text, pixels, runtime):
@@ -451,7 +455,7 @@ class DesktopBridge:
 
     def _run_agent_report(self, config, packets):
         report = self.agent_data['report']
-        self.emit({'kind': 'agent_started', 'scope': 'all', 'provider': 'groq'})
+        self.emit({'kind': 'agent_started', 'scope': 'all', 'provider': (self.agent_config or {}).get('provider', 'groq')})
         try:
             for packet in packets:
                 if self.agent_stop.is_set():
@@ -481,7 +485,7 @@ class DesktopBridge:
             self.emit(event)
         try:
             if not batch:
-                observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': 'groq'})
+                observe({'kind': 'agent_started', 'evidence_id': packet['id'], 'provider': (self.agent_config or {}).get('provider', 'groq')})
             agent = EvidenceAgent(config, self.agent_data.get('ledger'), stop=self.agent_stop, emit=observe, persist=persist)
             persist(agent.ledger)
             entry = self.outcome.result['meta']['entry_url']

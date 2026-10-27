@@ -1,32 +1,32 @@
-# 기능 범위와 결과 계약
+# Feature scope and result contract
 
-[한국어](requirements.md) | [English](requirements.en.md)
+[한국어](requirements.ko.md) | [English](requirements.md)
 
-Chickadee Studio의 기본 입력, 실행 환경과 결과 형식을 정리합니다. 구현은 [아키텍처](architecture.md), 필드와 CSV 칼럼은 [출력 규격](result-format.md)을 참고하세요.
+This document describes the app's inputs, runtime and output contract. See [Architecture](architecture.md) and [Result format](result-format.md).
 
-| 구분 | 동작 |
+| Area | Behavior |
 | --- | --- |
-| 입력 | 진입 웹사이트 URL 1개 |
-| 탐색 | 같은 사이트의 하위 페이지, 게시글, 댓글과 iframe |
-| 문자 위장·은닉 | `HOMOGLYPH`, `JAMO`, `TRANSPARENT`, `OFFSCREEN` |
-| 이미지 | 이미지의 한국어 문구를 OCR로 추출하고 원문 텍스트와 구분해 분석 |
-| 검토 | 원문·요소 위치·이미지 근거와 사용자 검토 상태·메모 |
-| 배포 환경 | Windows x64 데스크톱 앱, GPU 없이 로컬 CPU 분석 |
-| 선택 AI | 사용자 키로 실행하는 Groq 추가 검토 |
-| 결과 | 실행별 로컬 파일, JSON·CSV·HTML·Markdown |
+| Input | One starting website URL |
+| Navigation | Same-site pages, posts, comments and iframes |
+| Text techniques | `HOMOGLYPH`, `JAMO`, `TRANSPARENT`, `OFFSCREEN` |
+| Images | Korean OCR, analyzed separately from original page text |
+| Review | Original text, element locations, images, review states and notes |
+| Distribution | Windows x64 desktop app with local CPU analysis; no GPU required |
+| Optional AI | Groq review using a user-provided key |
+| Output | Per-run local JSON, CSV, HTML and Markdown files |
 
-## JSON 계약
+## JSON contract
 
-`result.json`은 UTF-8(BOM 없음)이며 최상위 키는 `meta`, `findings`입니다. `meta`의 필수 필드는 `topic`, `entry_url`, `started_at`, `finished_at`, `elapsed_sec`이고 `tool_version`은 선택입니다. `topic`은 호환성을 위해 `TOPIC`을 사용합니다. 시각은 ISO 8601, 소요시간은 초 단위 숫자입니다.
+`result.json` uses UTF-8 without a BOM and has top-level `meta` and `findings` keys. Required metadata: `topic`, `entry_url`, `started_at`, `finished_at`, `elapsed_sec`. `tool_version` is optional. `topic` remains `TOPIC` for compatibility. Timestamps use ISO 8601; elapsed time is a number of seconds.
 
-모든 페이지의 결과를 하나의 `findings` 배열에 담고 0건이면 `[]`를 저장합니다. 항목에는 `id`, `url`, `is_violation`, `location`, `evidence_text`, `technique`가 필요합니다. ID는 파일 안에서 고유하며, `technique`는 위 4종 중 한 문자열입니다. 원문은 정규화 전 상태로 보존합니다. 검출 단위는 `(url, location, technique)`이므로 같은 요소에서 두 기법을 발견하면 별도 항목을 만듭니다.
+All pages share one `findings` array, including `[]` when empty. Each finding requires `id`, `url`, `is_violation`, `location`, `evidence_text` and `technique`. IDs must be unique within the file; `technique` is one of the four strings above. Preserve original text before normalization. Findings are unique by `(url, location, technique)`, so two techniques on one element produce separate records.
 
-`location`은 한 요소를 가리키는 CSS 선택자입니다. iframe 내부는 `iframe[src="절대주소"] >>> 내부 선택자`로 기록하며 중첩 경로도 보존합니다. `url`에는 상위 페이지 주소를 기록합니다. 게시글을 구분하는 쿼리 값은 유지합니다.
+`location` is a CSS selector identifying one element. Frame paths use `iframe[src="absolute URL"] >>> inner selector`, repeated for nested frames. `url` identifies the parent page. Preserve query values that distinguish posts.
 
-추가 광고 문맥은 `result_extra.json`에 `technique: "ETC"`, `extra_finding`과 함께 기록합니다. 검토 후보의 `is_violation:false`는 불법성을 확정하지 않았다는 뜻입니다. [JSON Schema](../schemas/result.schema.json)는 문자 위장·은닉 4종 결과를 다룹니다.
+Additional advertising context goes in `result_extra.json` with `technique: "ETC"` and `extra_finding`. For review candidates, `is_violation:false` means illegality has not been established. The [JSON Schema](../schemas/result.schema.json) covers the four text techniques.
 
-## 저장과 검증
+## Storage and validation
 
-앱의 기본 경로는 `문서/Chickadee/results/<실행별 폴더>/`이며 CLI는 `results`입니다. 실제 경로는 앱의 **결과 폴더**에서 확인합니다. 완료·일부 결과·중단·실패 상태와 수집하지 못한 범위는 `scan-report.json`을 함께 확인하세요. 탐지와 AI 의견은 법적 판단을 대신하지 않습니다.
+The app defaults to `Documents/Chickadee/results/<run folder>/`; the CLI defaults to `results`. Open **결과 폴더** (Results folder) to find the actual path. Read `scan-report.json` for completion status, partial results, cancellation, failures and missing coverage. Detection and AI opinions do not replace legal judgment.
 
-[검증 안내](validation.md) · [기여 안내](../CONTRIBUTING.md)
+[Validation](validation.md) · [Contributing](../CONTRIBUTING.md)

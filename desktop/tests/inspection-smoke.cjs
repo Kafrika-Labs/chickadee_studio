@@ -1,4 +1,6 @@
 // Actual renderer + Python bridge + localhost fixture. No paid API requests.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const packaged = Boolean(process.env.CHICKADEE_PACKAGED_EXE);
 const launch = packaged ? require("./native-app.cjs").launch : require("./source-ui-harness.cjs").launch;
 const assert = require("node:assert/strict");
@@ -156,17 +158,17 @@ const http = require("node:http");
     assert.equal((await page.evaluate(async () => window.chickadee.inspection({ run_id: (await window.chickadee.state()).run_id }))).agent.configured, false);
     await page.getByText('미등록', { exact: true }).waitFor();
     await page.getByRole('button', { name: '설정 적용', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'AI 연결 설정에서 Groq API 키를 입력하세요.' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'AI 연결 설정에서 선택한 제공자의 API 키를 입력하세요.' }).waitFor();
     await page.getByRole('button', { name: 'API 키 등록', exact: true }).click();
-    await page.getByLabel('Groq API 키', { exact: true }).fill('test_key_not_real');
+    await page.getByLabel('API 키', { exact: true }).fill('test_key_not_real');
     await page.getByRole('button', { name: '모델 및 사용 한도', exact: true }).click();
-    await page.getByLabel('Groq 토큰 한도', { exact: true }).fill('1000');
+    await page.getByLabel('누적 토큰 한도', { exact: true }).fill('1000');
     await page.getByRole('button', { name: '설정 적용', exact: true }).click();
-    await page.waitForFunction(() => !document.querySelector('input[aria-label="Groq API 키"]'));
+    await page.waitForFunction(() => !document.querySelector('input[aria-label="API 키"]'));
     await page.getByRole('button', { name: '일반', exact: true }).click();
     await page.getByRole('button', { name: 'AI 연결', exact: true }).click();
     await page.getByRole('button', { name: '설정 적용', exact: true }).click();
-    await page.getByRole('status').filter({ hasText: 'Groq 설정을 적용했습니다.' }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'AI 연결 설정을 적용했습니다.' }).waitFor();
     await page.getByRole('button', { name: '알림', exact: true }).click();
     await page.getByLabel('Slack 웹훅 URL', { exact: true }).waitFor();
     await page.getByRole('button', { name: '알림 설정 저장', exact: true }).click();

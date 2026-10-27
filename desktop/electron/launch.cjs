@@ -6,6 +6,23 @@ const { execFileSync, spawn } = require("node:child_process");
 
 const desktop = path.resolve(__dirname, "..");
 let executable = require("electron");
+if (process.platform === "win32") {
+  const { createHash } = require("node:crypto");
+  const icon = path.join(desktop, "assets/app.ico");
+  const version = require("electron/package.json").version;
+  const iconHash = createHash("sha256").update(fs.readFileSync(icon)).digest("hex").slice(0, 12);
+  const directory = path.resolve(desktop, "../artifacts/dev-app", `${version}-win-${iconHash}`);
+  const branded = path.join(directory, "Chickadee.exe");
+  const marker = path.join(directory, "ready");
+  if (!fs.existsSync(marker)) {
+    fs.cpSync(path.dirname(executable), directory, { recursive: true });
+    fs.renameSync(path.join(directory, "electron.exe"), branded);
+    const editor = path.join(desktop, "node_modules/electron-winstaller/vendor/rcedit.exe");
+    execFileSync(editor, [branded, "--set-icon", icon], { stdio: "inherit", windowsHide: true });
+    fs.writeFileSync(marker, version);
+  }
+  executable = branded;
+}
 if (process.platform === "darwin") {
   const version = require("electron/package.json").version;
   const directory = path.resolve(desktop, "../artifacts/dev-app", `${version}-branded-v2`);

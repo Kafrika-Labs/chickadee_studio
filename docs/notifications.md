@@ -1,19 +1,19 @@
-# 알림과 완료 리포트
+# Notifications and completion reports
 
-[한국어](notifications.md) | [English](notifications.en.md)
+[한국어](notifications.ko.md) | [English](notifications.md)
 
-설정의 측면 메뉴에서 **일반**, **AI 연결**, **알림**을 선택합니다.
+The settings sidebar contains General, AI connection and Notifications.
 
-알림 페이지에서 데스크톱 알림, 기본 알림음, 앱에 초점이 있을 때 알림 생략을 설정한 뒤 **알림 설정 저장**을 누릅니다. 운영체제 알림 권한은 별도로 허용해야 합니다. 테스트 알림 버튼은 저장된 설정을 사용하며 실제 시스템 알림을 요청합니다.
+Configure desktop notifications, default sound and suppression while the app is focused, then choose **알림 설정 저장** (Save notification settings). OS notification permission is separate. The test button uses saved settings and requests a real system notification.
 
-Slack과 Discord는 각 채널의 Incoming Webhook URL을 등록하고 전송 토글을 켜서 저장합니다. 등록된 주소는 입력칸으로 다시 반환하지 않으며, 빈칸으로 저장하면 기존 주소를 유지합니다. 삭제 체크 후 저장하면 해당 주소가 제거되고 전송도 꺼집니다.
+For Slack or Discord, enter the channel's Incoming Webhook URL, enable delivery and save. Saved URLs are not returned to the input field. Saving an empty field preserves the existing URL; selecting deletion and saving removes it and disables delivery.
 
-- 웹훅은 Electron safeStorage로 암호화하여 사용자 데이터 폴더의 notifications.json에 저장합니다. 보안 저장소를 사용할 수 없는 환경에서는 평문으로 저장하지 않습니다.
-- 검사 완료·일부 완료·중단·실패 시 상태, 방문 수, 필수 탐지 수, 광고 의심 수를 보냅니다. 사이트 URL·페이지 원문·이미지·로컬 경로·결과 파일은 보내지 않습니다.
-- 실제 종료 이벤트에만 반응하며 기록을 다시 열거나 탭을 이동해도 재전송하지 않습니다.
-- 8초 제한, 리디렉션 거부, 자동 재시도 없음. 전송 실패는 검사 결과를 바꾸지 않으며 알림 페이지를 다시 열면 마지막 전송 상태를 확인할 수 있습니다.
-- 웹훅 전송은 데스크톱 알림 및 앱 초점 설정과 독립적으로 작동합니다. 설정 저장 전 종료된 검사에는 소급 전송하지 않습니다.
+- Webhooks are encrypted with Electron safeStorage in `notifications.json` in the user data directory. They are not stored as plaintext when secure storage is unavailable.
+- Completed, partial, cancelled and failed runs send status, visited-page count, technique finding count and suspected-ad count. Site URLs, original text, images, local paths and result files are not sent.
+- Only actual termination events trigger delivery. Reopening history or switching tabs does not resend reports.
+- Requests have an 8-second timeout, reject redirects and do not retry automatically. Delivery failure does not change scan results. Reopen notification settings to inspect the last delivery status.
+- Webhook delivery is independent of desktop notification/focus settings. Runs that ended before settings were saved are not sent retroactively.
 
-개발 검증은 가짜 전송 함수로 수행하며 실제 채널로 테스트 메시지를 보내지 않습니다. Electron 기능 추가 후에는 앱을 완전히 종료하고 다시 실행해야 합니다.
+Development checks use fake send functions, not real channel messages. Fully restart the app after adding Electron functionality.
 
-[Slack 공식 웹훅 문서](https://api.slack.com/messaging/webhooks) · [Discord 웹훅 문서](https://discord.com/developers/docs/resources/webhook)
+[Slack webhook documentation](https://api.slack.com/messaging/webhooks) · [Discord webhook documentation](https://discord.com/developers/docs/resources/webhook)

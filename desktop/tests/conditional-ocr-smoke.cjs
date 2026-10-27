@@ -1,4 +1,6 @@
 // Real renderer + backend. Text bypasses OCR; a real image takes the OCR branch.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const packaged = Boolean(process.env.CHICKADEE_PACKAGED_EXE);
 const { launch } = require(packaged ? './native-app.cjs' : './source-ui-harness.cjs');
 const assert=require('node:assert/strict');

@@ -1,5 +1,7 @@
 // Browser-only visual QA of local UI files and saved synthetic evidence.
 // Does not launch Chickadee.exe, its engine, or any inspected website.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const { chromium } = require("playwright");
 const fs = require("node:fs/promises");
 const path = require("node:path");
@@ -110,6 +112,7 @@ const assert = require("node:assert/strict");
           );
         };
         window.chickadee = {
+          language: "ko",
           state: async () => ({
             history,
             preview_only: true,

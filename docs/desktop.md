@@ -1,310 +1,144 @@
-# Chickadee Studio 사용 가이드
+# Chickadee Studio user guide
 
-[한국어](desktop.md) | [English](desktop.en.md)
+[한국어](desktop.ko.md) | [English](desktop.md)
 
-현재 데스크톱 앱 기준입니다. 처음 사용한다면 검사 시작 → 구성·OCR → 탐지·검토 순서로 읽으세요. 앱 안에서는 **설정 → 사용 가이드**에서 같은 내용을 볼 수 있습니다.
+This guide covers the current desktop app. Start with starting a scan, workflow/OCR and reviewing findings. The app's Korean guide is available under **설정 → 사용 가이드** (Settings → User guide). English explanations below retain key Korean control labels.
 
-## 목차
+## Contents
 
-1. [검사 시작](#guide-1)
-
-2. [구성·OCR](#guide-2)
-
-3. [속도·환경](#guide-3)
-
-4. [진행 확인](#guide-4)
-
-5. [탐지·검토](#guide-5)
-
-6. [AI 검토](#guide-6)
-
-7. [기록·내보내기](#guide-7)
-
-8. [예약 검사](#guide-8)
-
-9. [알림](#guide-9)
-
-10. [앱 관리](#guide-10)
+1. [Start a scan](#guide-1)
+2. [Workflow and OCR](#guide-2)
+3. [Speed and runtime](#guide-3)
+4. [Progress](#guide-4)
+5. [Findings and review](#guide-5)
+6. [AI review](#guide-6)
+7. [History and export](#guide-7)
+8. [Schedules](#guide-8)
+9. [Notifications](#guide-9)
+10. [App management](#guide-10)
 
 <a id="guide-1"></a>
 
-## 1. 첫 검사는 주소 입력부터 시작합니다
+## 1. Start with a website address
 
-검사 구성은 실행할 작업을 보여주고, 검사 분석은 실행하면서 수집한 근거를 보여줍니다.
+The workflow describes what will run; inspection analysis shows evidence collected during execution.
 
-![검사 구성 · 검사 대상 노드와 URL 입력 패널](../desktop/assets/guide/start.png)
+![Target node and URL panel](../desktop/assets/guide/start.png)
 
-### 대상 입력
+Select **Scan target** in the workflow and enter an `http://` or `https://` URL in the panel on the right, such as `https://example.go.kr`. Open the lower-left gear → Settings → General to check maximum pages, total time and navigation settings. **Back to app** returns to the previous screen.
 
-왼쪽 검사 구성에서 검사 대상 노드를 누릅니다. 오른쪽 검사 대상 URL에 http:// 또는 https://로 시작하는 주소를 입력하세요.
-
-### 범위 확인
-
-왼쪽 아래 톱니바퀴 → 설정 → 일반에서 최대 페이지, 전체 제한시간, 사이트 탐색 설정을 확인합니다. 설정 화면의 앱으로 돌아가기를 누르면 이전 화면으로 돌아옵니다.
-
-### 검사 실행
-
-상단 검사 실행을 누릅니다. 실행 옆 펼침 메뉴의 이 페이지만 검사로 시작하면 입력한 페이지로 범위를 좁힐 수 있습니다.
-
-### 처음이라면
-
-가이드 마지막의 데모로 연습하기 또는 검사 실행 옆 메뉴의 데모 검사를 사용하세요. 내장 예제로 탐지와 검토 흐름을 확인할 수 있습니다.
-
-주소 예시: `https://example.go.kr`
-
-검사가 시작되지 않으면 URL 형식과 엔진 준비 상태를 확인하세요. 검사 중에는 일부 설정을 변경할 수 없습니다.
+Choose **Run scan**. Its adjacent menu offers **Scan only this page** and **Demo scan**. The guide also offers **Practice with demo**. If scanning cannot start, check the URL and engine readiness. Some settings cannot change during a run.
 
 <a id="guide-2"></a>
 
-## 2. 고정된 검사 흐름과 이미지 OCR
+## 2. Fixed workflow and image OCR
 
-8개 노드는 정해진 파이프라인입니다. 연결선을 직접 잇거나 삭제할 필요가 없습니다.
+![Image OCR node settings](../desktop/assets/guide/ocr.png)
 
-![이미지 OCR 노드를 눌러 사용 여부 확인](../desktop/assets/guide/ocr.png)
+The eight nodes form a fixed pipeline; connections need no manual editing. Target → browser → collection feeds technique detection and advertising classification. Image OCR extracts text for both analyses, followed by deduplication and output. Nodes can be moved without changing the analysis path.
 
-### 전체 흐름
+Select the OCR node and enable **이미지 OCR 사용**. PaddleOCR reads Korean text from supported images and CSS backgrounds on the local CPU, without training or API keys. Economy mode skips OCR even when the node is enabled; choose Standard in Settings → General and run **OCR 기능 확인** (Check OCR). Auto selects a mode based on resources.
 
-검사 대상 → 브라우저 → 콘텐츠 수집 후 필수 탐지와 광고 분류를 수행합니다. 이미지 OCR은 이미지의 글자를 읽어 두 분석에 전달하고, 중복 정리 후 결과를 출력합니다.
-
-### OCR 켜기
-
-이미지 OCR 노드를 누르고 이미지 OCR 사용을 켭니다. PaddleOCR가 지원되는 이미지·배경 이미지의 한국어 글자를 로컬 CPU에서 읽습니다. 직접 학습하거나 API 키를 넣을 필요는 없습니다.
-
-### 절약 모드 확인
-
-설정 → 일반 → 실행 환경이 절약이면 노드에서 OCR을 켜도 이미지 OCR을 생략합니다. OCR이 필요하면 표준을 선택하고 OCR 기능 확인으로 모델 구동을 점검하세요. 자동 모드는 기기 자원에 따라 선택됩니다.
-
-### 처리 결과 읽기
-
-OCR 실패·판독 불가·생략은 탐지 없음과 다릅니다. 결과의 OCR 안내와 이미지 근거를 확인하세요. 같은 페이지·유형·문구의 본문/OCR 결과는 합치되 각각의 근거는 보존합니다.
-
-노드 위치는 옮길 수 있지만 분석 경로는 고정입니다. 모델 누락이나 처리 한도 때문에 일부 이미지를 읽지 못할 수 있습니다.
+Failure, unreadable and skipped are distinct from no findings. Check OCR status and evidence. Matching body/OCR findings on the same page, category and text are combined while retaining both sources. Missing models and processing limits can leave images unread.
 
 <a id="guide-3"></a>
 
-## 3. 다른 작업과 함께 검사하도록 조절합니다
+## 3. Adjust scanning alongside other work
 
-설정 → 일반에서 탐색 범위, 페이지 간격, 실행 환경, 저장 위치를 관리합니다.
+![General settings](../desktop/assets/guide/general.png)
 
-![설정 → 일반 · 탐색 속도와 실행 환경](../desktop/assets/guide/general.png)
+Maximum pages and the configured deadline bound web collection; reaching them does not establish full-site coverage. Collected text and OCR evidence then receive a separate local analysis budget of up to 30 minutes. Stop remains available during analysis. Navigation waits are Fast 0 seconds, Normal 0.5 seconds and Slow 5 seconds, or 0–30 seconds with the slider. They delay the next page, not current-page processing. Increase the collection deadline when using longer waits.
 
-### 페이지와 시간
-
-최대 페이지는 방문할 페이지 수의 상한입니다. 설정의 제한시간은 웹 탐색에 적용합니다. 수집한 자료의 ML과 Laya 분석은 별도의 최대 30분 안에서 계속합니다. 중단 버튼으로 로컬 분석도 중단할 수 있습니다. 한도에 도달하면 미처리 수를 확인하세요.
-
-### 천천히 탐색
-
-빠르게는 0초, 보통은 0.5초, 천천히는 5초 간격입니다. 슬라이더로 0~30초를 지정할 수도 있습니다. 다음 페이지로 이동하기 전의 대기 시간이며 현재 페이지의 처리 속도를 낮추는 기능은 아닙니다.
-
-### 실행 환경
-
-자동은 기기 자원에 맞춰 모드를 정합니다. 표준은 사용 가능한 OCR과 로컬 AI를 사용하고, 절약은 이미지 OCR을 생략합니다. 필수 탐지는 유지됩니다. 기능 상태와 OCR 기능 확인 결과를 함께 보세요.
-
-### 저장과 미리보기
-
-결과 저장 위치의 폴더 아이콘으로 저장할 곳을 선택합니다. 각 검사는 별도 폴더에 저장됩니다. 실시간 브라우저 화면을 끄면 미리보기 화면을 표시하지 않습니다.
-
-천천히 검사할 때는 전체 제한시간도 늘려 주세요. 설정 검색에 속도, OCR, 저장 등을 입력하면 관련 메뉴를 찾을 수 있습니다.
+Auto selects a runtime mode from device resources. Standard uses available OCR and local AI; Economy skips image OCR while preserving technique detection. Check feature status and the OCR check result. Choose the output directory with the folder icon; every run has a separate folder. Disable live browser preview to hide periodic captures. Settings search helps locate speed, OCR and storage controls.
 
 <a id="guide-4"></a>
 
-## 4. 현재 작업과 실제 방문 경로를 구분해서 봅니다
+## 4. Read progress and observed navigation
 
-검사 구성, 탐색 경로, 진행 기록, 검사 분석은 각각 다른 정보를 보여줍니다.
+![Observed exploration graph](../desktop/assets/guide/analysis.png)
 
-![검사 분석 → 탐색 그래프 · START부터 관측 경로 확인](../desktop/assets/guide/analysis.png)
+Workflow nodes are processing stages. Navigation lists visited and pending URLs. Inspection analysis → Exploration graph shows observed page, state and region relationships from START to END. Select an observation node to inspect text, local AI and available image evidence. If graph limits omit observations, use the omitted counts/limit notices instead of treating displayed nodes as the total workload.
 
-### 구성과 경로
-
-검사 구성의 노드는 처리 단계입니다. 탐색 경로에서는 방문한 주소와 대기 주소를 확인합니다. 검사 분석 → 탐색 그래프는 START부터 수집된 페이지·상태·영역의 관계를 보여줍니다.
-
-### 근거 선택
-
-탐색 그래프에서 관측 노드를 누르면 해당 문구와 로컬 AI 결과, 확보된 이미지·스크린샷 근거를 볼 수 있습니다. START와 END는 흐름의 시작과 끝을 표시합니다.
-
-### 미리보기
-
-검사 구성 오른쪽 가장자리 버튼으로 미리보기 패널을 엽니다. 표시되는 화면은 주기적으로 촬영한 이미지이며 연속 영상이 아닙니다. 스크린샷의 확대 아이콘은 중앙 모달을 엽니다.
-
-### 일시정지와 중단
-
-일시정지는 현재 페이지 처리를 정리한 뒤 적용되며 검사 재개로 이어갑니다. 검사 중단은 실행을 끝내고 수집된 결과를 저장합니다. 오류와 단계별 동작은 진행 기록에서 확인하세요.
-
-그래프에 모든 관측을 표시하지 못하면 생략 건수나 수집 한도 안내가 나타납니다. 화면에 보이는 노드 수만으로 전체 검사량을 판단하지 마세요.
+Open preview using the button at the workflow's right edge. Captures are periodic screenshots, not video. The enlarge icon opens a centered modal. **일시정지** pauses after current-page work and cleanup; **검사 재개** resumes. **검사 중단** ends the run and saves collected results. The event history records operations and errors.
 
 <a id="guide-5"></a>
 
-## 5. 발견한 문구와 화면을 함께 확인합니다
+## 5. Review original text and captures
 
-탐지 내역에서 의심 항목을 읽고 직접 검토 상태와 메모를 남깁니다.
+![Findings and evidence panel](../desktop/assets/guide/review.png)
 
-![탐지 내역 · 항목 선택 후 원문과 근거 검토](../desktop/assets/guide/review.png)
+Use the findings filters and text/URL search. **필수 탐지** covers homoglyphs, Jamo, transparent text and offscreen hiding; advertising filters cover context candidates. Review filters can isolate unreviewed items.
 
-### 항목 찾기
+Select an item to read original text, reasons, page and technical details. Copy its URL or open it in a browser; opening it visits the real website. Enlarge a screenshot and close with Esc or Close. OCR evidence also shows text coordinates and confidence. Without a stored image, use remaining text/CSS evidence.
 
-전체·필수 탐지·광고 의심 탭과 문구·URL 검색을 사용합니다. 검토 필터로 미검토 항목을 모아 볼 수 있습니다. 필수 탐지는 문자 위장·자모·투명·화면 밖 은닉을, 광고 의심은 광고 문맥 후보를 보여줍니다.
-
-### 근거 읽기
-
-항목을 누르고 발견한 문구, 탐지 이유, 페이지·기술 정보를 확인합니다. 원본 URL은 클릭해 브라우저로 열거나 복사할 수 있습니다. 원문 접속은 실제 사이트로 이동합니다.
-
-### 이미지 확인
-
-스크린샷은 확대 아이콘으로 열고 Esc 또는 닫기로 닫습니다. OCR 항목은 이미지 속 글자 위치와 신뢰도도 확인하세요. 저장된 화면이 없는 항목은 원문·CSS 등 남아 있는 근거로 검토합니다.
-
-### 상태 남기기
-
-메모를 입력하고 검토 확인 또는 제외를 누릅니다. 항목 메뉴에서 메모만 저장하거나 미검토로 되돌릴 수 있습니다. 여러 항목을 선택하면 일괄 검토도 가능합니다.
-
-탐지와 AI 의견은 의심 근거입니다. 검토 확인·제외는 사용자의 판단이며 원본 결과와 별도로 저장됩니다.
+Enter notes and choose **검토 확인** (Confirm review) or **제외** (Dismiss). The item menu also saves notes alone or restores unreviewed status. Select several items for bulk review. Detection and AI opinions are evidence for review; human states are saved separately from original findings.
 
 <a id="guide-6"></a>
 
-## 6. 로컬 분석과 외부 AI 추가 검토를 구분합니다
+## 6. Local analysis and optional external review
 
-검사 분석 → AI 검토에서 수집한 전체 영역을 검토하고 리포트로 저장합니다.
+![AI connection settings](../desktop/assets/guide/ai.png)
 
-![설정 → AI 연결 · API 키와 모델·사용 한도](../desktop/assets/guide/ai.png)
+Technique rules, local text/visual AI and image OCR need no external key. Processing depends on available models and runtime settings; outputs support review.
 
-### 기본 분석
+For external review, open Settings → AI connection → **Groq API 키 등록**, enter your key and apply settings. Groq is the current provider. Keys stay in session memory and are removed when the app exits. Registration alone neither validates connectivity nor starts review; connectivity is checked on an actual request.
 
-필수 탐지와 로컬 문자·피싱 화면 AI, 이미지 OCR에는 외부 AI API 키가 필요하지 않습니다. 사용 가능한 모델과 실행 환경에 따라 처리되며 결과는 검토를 돕는 근거입니다.
-
-### AI 연결
-
-외부 AI로 추가 검토하려면 설정 → AI 연결에서 Groq API 키 등록을 누르고 키를 입력한 뒤 설정 적용을 누릅니다. 현재 연결 제공자는 Groq입니다. 키는 현재 세션에서만 사용되며 앱을 종료하면 삭제됩니다.
-
-### 전체 검토
-
-검사가 끝난 결과나 검사 기록을 연 뒤 검사 분석 → AI 검토 → 전체 검토 시작을 누릅니다. 탐지 목록의 필터와 관계없이 전체 수집 영역을 대상으로 합니다. 키 등록만으로 검토가 자동 실행되지는 않습니다.
-
-### 한도와 저장
-
-모델 및 사용 한도에서 누적 호출·토큰 한도를 조절합니다. 검토 안내 및 사용량에서 현재 검사 기준 사용량을 확인하세요. 중단하거나 한도에 도달하면 완료된 부분만 남으며, 결과가 있으면 리포트 저장으로 Markdown을 내려받습니다.
-
-키 등록 표시는 연결 성공을 뜻하지 않습니다. 실제 요청 시 연결을 확인합니다. 외부 AI 검토를 실행하면 선택된 근거 문맥이 해당 제공자에게 전송됩니다.
+Open a completed scan or history entry, then Inspection analysis → AI review → **전체 검토 시작** (Start full review). This covers collected regions regardless of findings filters. Adjust cumulative call/token limits and inspect usage for the current run. Cancellation or limits preserve completed opinions and remaining counts. Save available report content with **리포트 저장**. Running external review sends selected evidence context to the provider; see [AI review](inspection-agent.md).
 
 <a id="guide-7"></a>
 
-## 7. 검사별 결과 폴더를 함께 보관하세요
+## 7. Keep each result folder together
 
-검사 결과는 자동 저장되며, 이전 기록을 열어 탐지·근거·검토 상태를 다시 확인할 수 있습니다.
+![Scan history](../desktop/assets/guide/history.png)
 
-![검사 기록 · 저장된 실행과 완료 상태 확인](../desktop/assets/guide/history.png)
+Open an entry in **검사 기록** (Scan history). Check completed, partial, cancelled or failed status first; partial means some scope was not collected because of limits or errors. The lower-left import control opens `result.json`. Keep `scan-report.json`, `review.json` and evidence images alongside it to restore details.
 
-### 기록 열기
-
-왼쪽 검사 기록에서 원하는 실행을 선택합니다. 완료, 일부 결과, 중단, 실패 상태를 먼저 확인하세요. 일부 결과는 제한이나 오류로 확인하지 못한 범위가 있다는 뜻입니다.
-
-### 다른 결과 불러오기
-
-왼쪽 아래 결과 불러오기 아이콘으로 result.json을 선택합니다. scan-report.json, review.json, 근거 이미지 등은 같은 결과 폴더에 함께 보관해야 상세 정보를 복원할 수 있습니다.
-
-### 폴더와 CSV
-
-상단 결과 폴더로 저장 위치를 엽니다. 탐지 내역의 CSV 저장은 표 형식 결과를 내보냅니다. AI 리포트 저장과는 별도 기능이며, 수동 검토 기록은 review.json에 저장됩니다.
-
-### 공유할 때
-
-result.json은 필수 탐지, scan-report.json은 광고 후보·오류·OCR 등 상세 결과를 담습니다. 이미지 근거까지 전달하려면 파일 하나만 보내지 말고 해당 검사 폴더 전체를 보관·전달하세요.
-
-스크린샷이 없다고 탐지가 실패한 것은 아닙니다. 촬영 실패나 이미지 파일 누락일 수 있으므로 남아 있는 근거와 진행 기록을 확인하세요.
+**결과 폴더** opens storage. **CSV 저장** exports tabular findings separately from AI reports. Manual review is stored in `review.json`. `result.json` contains technique findings; `scan-report.json` contains candidates, errors, OCR and other detail. Share/preserve the whole run folder to include image evidence. Missing screenshots can indicate capture failure or missing files, not necessarily detection failure; check remaining evidence and events.
 
 <a id="guide-8"></a>
 
-## 8. 매일 오전 9시 검사를 예약합니다
+## 8. Schedule a daily 09:00 scan
 
-설정 → 예약 검사에서 실행 시간과 반복 요일을 지정합니다.
+![Schedule settings](../desktop/assets/guide/schedules.png)
 
-![설정 → 예약 검사 · 새 일정 작성](../desktop/assets/guide/schedules.png)
+Set the URL, maximum pages, deadline, speed and OCR first. A new schedule saves that workflow; later general changes do not update it. Open Settings → Scheduled scans → **예약 추가**, confirm name/URL, select daily at 09:00 (or once/selected weekdays), then save.
 
-### 설정 먼저 준비
-
-검사 대상 URL, 페이지 수, 제한시간, 속도, OCR 구성을 먼저 맞춥니다. 예약은 추가할 때의 검사 구성을 저장하므로 이후 일반 설정 변경이 기존 예약에 자동 반영되지는 않습니다.
-
-### 예약 추가
-
-예약 추가를 누르고 이름과 URL을 확인합니다. 매일과 09:00을 선택하거나 한 번만·요일 반복으로 날짜와 요일을 지정한 뒤 예약 저장을 누릅니다.
-
-### 실행 조건
-
-목록의 시간대와 다음 실행 시각, 활성화 상태를 확인하세요. 앱이 실행 중이고 컴퓨터가 깨어 있어야 합니다. 다른 검사나 AI 검토와 겹치거나 시간을 놓친 예약은 재실행 없이 건너뜁니다.
-
-### 관리와 결과
-
-예약의 토글로 활성화 여부를 바꾸고 연필로 수정하거나 휴지통으로 삭제합니다. 마지막 실행 안내에서 건너뛴 이유를 확인하고, 실제 실행 결과는 검사 기록에서 엽니다.
-
-예약 검사는 운영체제의 백그라운드 작업 등록 기능이 아닙니다. 앱 종료·절전 상태에서는 실행하지 않습니다.
+Check time zone, next run and enabled state. The app must be running and the computer awake. Missed occurrences or conflicts with another scan/AI review are skipped without retry. Use the toggle to enable, pencil to edit or trash to delete. Check the last-run message for skip reasons and history for actual results. Scheduling does not register an OS background task or wake the computer.
 
 <a id="guide-9"></a>
 
-## 9. 검사 종료를 알림과 채널 요약으로 받습니다
+## 9. Completion notifications and channel summaries
 
-설정 → 알림에서 데스크톱 알림과 Slack·Discord 완료 리포트를 각각 설정합니다.
+![Notification settings](../desktop/assets/guide/notifications.png)
 
-![설정 → 알림 · 데스크톱 알림과 완료 리포트](../desktop/assets/guide/notifications.png)
+Settings → Notifications configures desktop alerts and Slack/Discord independently. Select enabled, sound and suppression while focused, save, then test. If banners do not appear, check OS permission and focus mode.
 
-### 데스크톱 알림
-
-알림 활성화, 소리, 앱을 보고 있을 때 생략을 선택하고 알림 설정을 저장합니다. 테스트 알림 보내기로 확인하세요. 배너가 없으면 시스템의 알림 허용·집중 모드를 확인합니다.
-
-### 웹훅 등록
-
-Slack 또는 Discord 채널에서 발급한 웹훅 주소를 해당 입력란에 넣고 전송을 켠 뒤 저장합니다. 새 웹훅 저장에는 운영체제 보안 저장소가 필요합니다.
-
-### 보내는 내용
-
-검사가 완료·중단·실패하면 상태, 방문 페이지 수, 탐지 건수 요약을 보냅니다. 사이트 주소, 원문, 이미지, 결과 파일은 보내지 않습니다. 전체 근거는 앱의 검사 기록에서 확인하세요.
-
-### 예약과 함께
-
-예약 검사의 종료에도 같은 알림 설정을 사용합니다. 알림을 받는 것과 AI 검토를 실행하는 것은 별개이며, 웹훅 등록이 AI 리포트 생성을 자동 시작하지는 않습니다.
-
-웹훅 주소는 채널 전송 권한을 가진 값입니다. 가이드나 스크린샷에는 실제 주소를 넣지 마세요.
+Enter the channel's webhook URL, enable delivery and save. New webhook storage requires the OS secure store. Completion, cancellation and failure send status and summary counts, without site URLs, original text, images or result files. Use app history for evidence. Scheduled runs follow the same settings; registering webhooks does not start AI review. Do not include real webhook URLs in screenshots or guides.
 
 <a id="guide-10"></a>
 
-## 10. 업데이트·단축키·재실행을 관리합니다
+## 10. Updates, shortcuts and restart
 
-설정 검색으로 필요한 항목을 찾고, 자주 쓰는 조작을 단축키로 지정할 수 있습니다.
+![Updates](../desktop/assets/guide/updates.png)
 
-![설정 → 업데이트 · 버전 확인과 ZIP 다운로드](../desktop/assets/guide/updates.png)
+Settings → Updates → **업데이트 확인** checks releases. Download is enabled for a supported new asset. After verification, open the file location, close the app and extract the ZIP into a new folder. The current distribution does not replace itself automatically.
 
-### 업데이트 확인
+Settings → Shortcuts lets you assign commands, inspect conflicts and restore defaults. `Ctrl K` opens quick commands. The lower-left circular arrow restarts the app; it is unavailable during scans. Re-enter your session AI key after restart.
 
-설정 → 업데이트에서 업데이트 확인을 누릅니다. 다운로드 버튼은 지원되는 새 배포 파일이 있을 때 활성화됩니다. GitHub 릴리스에서 버전별 설명과 파일도 확인할 수 있습니다.
+## Login during a scan
 
-### 새 버전 실행
+A login redirect, HTTP 401 response or visible password field pauses scanning and opens **로그인 필요** (Login required), with a desktop notification where permitted.
 
-업데이트 다운로드 후 파일 검증이 완료되면 파일 위치 열기를 누릅니다. 앱을 종료하고 ZIP을 새 폴더에 풀어 새 실행 파일을 여세요. 현재 배포 방식은 앱을 자동 교체하지 않습니다.
+1. Choose **로그인** and sign in in the separate window.
+2. Return to Chickadee and choose **검사 재개**.
+3. The app transfers target-site cookies into the scan browser and retries the original page. It prompts again if login is still required.
 
-### 단축키 설정
+Closing the window alone does not resume. **이 페이지 건너뛰기** (Skip this page) records missing authenticated content and continues; stopping saves results. Login wait time does not count toward page/scan deadlines.
 
-설정 → 단축키에서 명령을 찾고 원하는 키 조합을 지정합니다. 중복되거나 사용할 수 없는 조합은 화면 안내를 확인하세요. 기본값으로 되돌릴 수도 있습니다.
+The app does not read or save passwords. The login window is an isolated temporary browser session. Cookies live in memory for this scan only, not later or scheduled runs. Cross-domain login redirects are supported, but only target-site cookies are transferred. Popup/localStorage authentication may not work. Unusual login paths without a password field may escape automatic detection; an ordinary login link alone does not trigger it.
 
-### 앱 재실행
+## Developer references
 
-왼쪽 아래 회전 화살표는 앱 재실행입니다. 검사 중에는 사용할 수 없습니다. 재실행하면 세션에 등록한 AI API 키는 다시 입력해야 합니다.
+[Python manual](manual.md) · [Result format](result-format.md) · [Windows distribution](windows-signing.md) · [Local tool contract](agent-extension.md)
 
-실제 탐지·검토를 익히려면 데모로 연습해 보세요.
-
-## 개발·상세 문서
-
-- [Python CLI·호환판 설명서](manual.md)
-- [결과 파일 형식](result-format.md)
-- [Windows 서명 정책](windows-signing.md)
-- [로컬 도구·AI 확장 규격](agent-extension.md)
-
-문서의 화면은 격리된 로컬 데모와 현재 렌더러로 촬영했습니다. 실제 사이트, API 키, 웹훅은 사용하지 않았습니다.
-
-## 검사 도중 로그인이 필요한 경우
-
-첫 이동뿐 아니라 수집 중 로그인 주소로 이동하거나 HTTP 401 응답·보이는 비밀번호 입력칸을 발견하면 검사를 기다리게 하고 **로그인 필요** 모달과 데스크톱 알림을 표시합니다. 운영체제 알림이 허용되지 않아도 앱 모달에서 조작할 수 있습니다.
-
-1. **로그인**를 눌러 별도 창에서 직접 로그인합니다.
-2. 로그인이 끝나면 Chickadee로 돌아와 **검사 재개**를 누릅니다.
-3. 앱이 인증 쿠키를 검사 브라우저로 전달하고 원래 요청한 페이지를 다시 확인합니다. 여전히 로그인 화면이면 다시 안내합니다.
-
-창만 닫으면 검사를 재개하지 않습니다. **이 페이지 건너뛰기**를 누르면 해당 페이지를 인증 필요로 미수집 처리하고 남은 페이지로 진행합니다. **검사 중단**은 수집된 결과를 저장하며 실행을 끝냅니다. 로그인 대기 시간은 페이지·전체 검사 제한시간에서 제외합니다.
-
-비밀번호는 앱이 읽거나 저장하지 않습니다. 로그인 창은 앱 API와 분리된 임시 브라우저 세션이며, 쿠키는 이번 검사에서만 메모리로 사용합니다. 다음 검사·예약까지 로그인을 유지하지 않습니다. 현재는 쿠키 기반 로그인을 지원하며, 다른 도메인의 로그인 주소로 리다이렉션돼도 로그인 창에서 인증할 수 있습니다. 검사 사이트에 발급된 쿠키만 전달하며, 팝업 인증·localStorage 기반 인증은 지원되지 않을 수 있습니다. 로그인 주소가 일반적인 login/signin/sso/authorize 형태가 아니고 비밀번호 입력칸도 없는 경우에는 자동 감지가 되지 않을 수 있습니다. 단순히 ‘로그인’ 링크가 있는 것만으로는 인증 필요로 처리하지 않습니다.
+Screenshots use an isolated local demo and current renderer, with no real websites, API keys or webhooks.

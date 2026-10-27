@@ -1,44 +1,42 @@
-# Windows 빠른 실행
+# Windows quick start
 
-[한국어](quickstart-windows.md) | [English](quickstart-windows.en.md)
+[한국어](quickstart-windows.ko.md) | [English](quickstart-windows.md)
 
-1. [최신 릴리스](https://github.com/orqan137/chickadee_studio/releases/latest)의 Windows x64 ZIP을 내려받아 전부 압축 해제합니다.
-2. `Chickadee.exe`를 더블클릭합니다. Windows 앱 제어 정책으로 차단되면 같은 폴더의 `ChickadeeRuntime.exe`를 실행합니다. 같은 앱·모델을 실행하는 공식 원본 호스트이며 보안 설정은 변경하지 않습니다. `resources` 등 함께 들어 있는 파일과 폴더를 유지합니다. 이전 버전이 열려 있으면 먼저 종료합니다.
-3. 검사할 URL을 입력하고 **검사 실행**을 누릅니다. 실행 옆 화살표 메뉴의 **데모 검사**로 로컬 예제를 먼저 확인할 수도 있습니다.
-4. 결과는 기본적으로 `문서/Chickadee/results` 아래 실행별 폴더에 저장됩니다. **결과 폴더**에서 실제 위치를 확인합니다.
+1. Download the Windows x64 ZIP from the [latest release](https://github.com/Kafrika-Labs/chickadee_studio/releases/latest) and extract the entire archive.
+2. Run `Chickadee.exe`. If Windows app control blocks it, use `ChickadeeRuntime.exe` in the same folder. This official unmodified runtime runs the same app and models without changing security settings. Keep `resources` and all accompanying files. Close any previous instance first.
+3. Enter a URL and choose **Run scan**. The adjacent menu offers **Demo scan** for a local example.
+4. Results are saved under `Documents/Chickadee/results`, in a separate folder per run. Open **결과 폴더** (Results folder) to see the actual location.
 
-**사이트 로그인:** 검사 중 로그인 안내가 나오면 별도 창에서 로그인한 뒤 앱에서 **검사 재개**를 누릅니다.
+**Site login:** When prompted, sign in in the separate login window, then choose **검사 재개** (Resume scan) in the app.
 
-**결과 파일 생성 경로:** `문서/Chickadee/results/<실행별 폴더>/result.json`은 필수 4종 결과, 같은 폴더의 `result_extra.json`은 추가 광고 문맥 검토 관측값입니다. `result.csv`와 `scan-report.json`도 같은 폴더에 저장됩니다. 사용자가 저장 폴더를 바꾸면 해당 위치의 실행별 폴더에 생성합니다. 추가 관측값의 `is_violation:false`는 자동으로 불법성을 확정하지 않았다는 뜻이며, 정상 광고로 확인했다는 뜻이 아닙니다.
+**Output paths:** `Documents/Chickadee/results/<run folder>/result.json` holds the four text techniques. `result_extra.json` holds additional advertising-context observations. `result.csv` and `scan-report.json` are in the same folder. A custom output directory also uses per-run folders. For additional observations, `is_violation:false` means illegality has not been established; it does not certify a legitimate advertisement.
 
-Python·Docker·VM 설치나 별도 옵션은 필요하지 않습니다.
+No separate Python, Docker, VM or GPU installation is required. The package includes Korean OCR, local ML, the trained Laya model and a standalone CPU runtime.
 
-한국어 이미지 OCR 모델도 포함됩니다. **광고 의심**에서 이미지로 탐지한 항목을 누르면 원본 이미지·글자 위치·인식 신뢰도를 확인합니다. OCR은 PC에서 실행하며 별도 비용이 발생하지 않습니다.
+Select an image-based finding in **광고 의심** (Suspected ads) to inspect the original image, text coordinates and recognition confidence. OCR runs locally at no additional service cost. Text goes directly to ML; images go through OCR first. With no images, the OCR node shows **이미지 없음** (No images). Laya follows ML. See [Local Laya setup](content-analysis.md#local-laya-setup).
 
-**처리 흐름:** 텍스트는 ML로 바로 전달하고 이미지가 있을 때만 OCR로 글자를 추출한 뒤 ML로 전달합니다. 이미지가 없으면 OCR 노드는 `이미지 없음`으로 표시합니다. 한국어 PaddleOCR·로컬 ML 모델을 사용합니다. 학습한 Laya 모델과 CPU 실행 환경도 동봉되어 ML 다음에 문맥을 분석합니다. 별도 모델 설치는 필요하지 않습니다. [분석 구성](content-analysis.md#로컬-laya-연결)을 참고하세요.
+## Optional Groq review
 
-**선택 기능인 Groq 에이전트:** 기본 검사는 API 키 없이 동작합니다. 서비스는 Groq, 기본 모델은 `openai/gpt-oss-20b`, 환경변수 이름은 `GROQ_API_KEY`입니다. 앱 AI 설정에 키를 입력하거나, 외부 키 파일을 사용할 때 아래 방식으로 명시적으로 선택한 외부 파일에서 읽습니다. 파일을 편집한 뒤 앱을 재실행하면 되며 재빌드가 필요하지 않습니다. 임의의 환경변수나 다른 프로젝트의 키는 자동으로 찾지 않습니다. 파일을 읽는 것만으로 API를 호출하지 않으며 기존 검사당 6회·24,000토큰 한도를 유지합니다.
+Core scanning needs no API key. The optional provider is Groq, the default model is `openai/gpt-oss-20b`, and the variable name is `GROQ_API_KEY`. Register a key in AI settings or explicitly select an external file:
 
 ```dotenv
-GROQ_API_KEY=여기에_발급받은_키
+GROQ_API_KEY=YOUR_GROQ_API_KEY
 ```
-
-**키 보관:** 설정에서 직접 입력한 키는 현재 실행 세션의 메모리에서만 사용합니다. 입력값은 화면에 가려지며 앱이 파일에 저장하지 않습니다. 결과 파일과 보고서에도 포함하지 않습니다. Groq 요청은 HTTPS로 전송합니다. 키를 암호화해서 저장하는 기능은 없으며 외부 `.env` 파일도 앱이 암호화하지 않습니다.
 
 ```powershell
 .\Chickadee.exe --groq-env-file 'C:\Chickadee\.env'
 ```
 
-## 처음 사용한다면
+Edit the file and restart to replace the key without rebuilding. The app does not search arbitrary environment variables or other projects for keys. Reading the file makes no API request; the default limit remains 6 calls and 24,000 tokens per scan.
 
-첫 실행 시 사용 가이드가 표시됩니다. 검사 시작·OCR·속도·검토·AI·기록·예약·알림·업데이트를 10개 주제로 안내합니다. 마지막의 **데모로 연습하기**을 누르면 내장 예제로 연습할 수 있습니다.
+Keys entered in settings are masked and kept only in session memory. They are not saved in app files, results or reports. Requests use HTTPS. This is non-persistent key handling, not encrypted key storage; the app does not encrypt external `.env` files either.
 
-**닫기** 또는 Esc로 닫아도 **설정 → 사용 가이드**에서 언제든 다시 볼 수 있습니다. 안내를 닫으면 다음 실행에서는 자동으로 표시하지 않습니다. 가이드를 보는 것만으로 검사가 시작되지는 않습니다.
+## First use
 
-**검사 구성**은 고정된 순서로 실행하며 이미지 OCR 사용 여부는 노드 설정에서 선택합니다. 검사 중인 페이지 이미지, 탐색 경로, HTTP 응답과 탐지 근거는 앱에서 확인할 수 있습니다.
+The first-run guide covers starting scans, OCR, speed, review, AI, history, scheduling, notifications and updates. **Practice with demo** starts the bundled example. Close it with **닫기** or Esc and reopen it through **설정 → 사용 가이드** (Settings → User guide). Once dismissed, it does not automatically reopen. Viewing the guide does not start a scan.
 
-검사 중에는 **일시정지·검사 재개·검사 중단**을 사용합니다. 완료 후 탐지 항목에 검토 상태와 메모를 남기거나 체크박스로 일괄 처리할 수 있습니다. `Ctrl K`는 빠른 명령입니다. 검사 설정과 저장 폴더는 다음 실행에도 유지합니다.
+The workflow follows a fixed order; enable image OCR in its node settings. Inspect page captures, navigation paths, HTTP responses and evidence in the app. Use **일시정지**, **검사 재개** and **검사 중단** to pause, resume and stop. Review findings individually or in bulk and save notes. `Ctrl K` opens quick commands. Scan settings and the output directory persist.
 
-이 배포본은 Windows x64용 Electron 앱입니다. 이전 `ChickadeeBot.exe`와 실행 옵션은 Python/Tkinter 호환판에 해당합니다.
+This package is the Windows x64 Electron app. `ChickadeeBot.exe` and its older options belong to the Python/Tkinter compatibility edition.
 
-[데스크톱 앱 안내](desktop.md) · [저장 형식](result-format.md) · [Python 호환판 매뉴얼](manual.md)
+[Desktop guide](desktop.md) · [Result format](result-format.md) · [Python compatibility manual](manual.md)

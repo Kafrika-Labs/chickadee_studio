@@ -1,3 +1,5 @@
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const assert = require("node:assert/strict");
@@ -40,6 +42,7 @@ async function waitForHistory(page, count) {
   try {
     const page = await app.firstWindow();
     page.setDefaultTimeout(15000);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     const guide = page.getByRole("dialog", { name: "사용 가이드" });
@@ -117,6 +120,7 @@ async function waitForHistory(page, count) {
       path: path.join(artifacts, "electron-workflow.png"),
     });
     await page.getByRole("button", { name: /^탐지 내역/ }).click();
+    await page.locator("tbody tr").first().waitFor();
     assert.equal(await page.locator("tbody tr").count(), 2);
     const firstNewest = await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label');
     const firstFinding = firstResult.findings.find(row => row.id === firstNewest.replace(/ 선택$/, ""));
@@ -130,6 +134,15 @@ async function waitForHistory(page, count) {
     await page.getByRole('menuitemradio',{name:'최신순',exact:true}).click();
     assert.equal(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
     await page.locator("tbody tr").first().click();
+    const evidenceCard = page.locator('.page-evidence-item').first();
+    await evidenceCard.waitFor();
+    await evidenceCard.screenshot({ path: path.join(artifacts, 'evidence-card.png') });
+    await evidenceCard.getByRole('button', { name: '스크린샷 확대', exact: true }).click();
+    await page.getByRole('dialog', { name: '스크린샷 확대', exact: true }).waitFor();
+    await page.keyboard.press('Escape');
+    await evidenceCard.locator('.capture-metadata summary').click();
+    await evidenceCard.locator('.capture-metadata dl').waitFor();
+    await evidenceCard.locator('.capture-metadata summary').click();
     await page.locator(".review-note-details > summary").click();
     await page
       .getByRole("textbox", { name: "검토 메모" })
@@ -187,6 +200,7 @@ async function waitForHistory(page, count) {
     const bytes = await fs.readFile(csv);
     assert.ok(bytes.subarray(0, 3).equals(Buffer.from([239, 187, 191])));
     await page.getByRole("button", { name: "탐색 경로", exact: true }).click();
+    await page.locator('.content-area[data-view="pages"] tbody tr').nth(3).waitFor();
     assert.equal(await page.locator("tbody tr").count(), 4);
     assert.equal(await page.locator('.path-group-toggle').count(), 0);
     await page.getByRole("button", { name: "진행 기록", exact: true }).click();
@@ -198,6 +212,7 @@ async function waitForHistory(page, count) {
     );
     await page.getByRole("button", { name: "검사 구성", exact: true }).click();
     const edge = page.locator('[data-testid="rf__edge-techniques-dedup"]');
+    await edge.waitFor();
     await edge.dispatchEvent("click");
     await page.keyboard.press("Delete");
     // Conditional OCR and optional Laya keep all 11 fixed pipeline connections.

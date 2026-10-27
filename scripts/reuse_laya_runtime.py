@@ -30,7 +30,7 @@ def main():
     folder=ROOT/'artifacts/prebuilt-laya';folder.mkdir(parents=True,exist_ok=True)
     archive=folder/ARCHIVE
     if not archive.exists():
-        subprocess.run(['gh','release','download',BASE,'--repo','orqan137/chickadee_studio','--pattern',ARCHIVE,'--dir',str(folder)],check=True,cwd=ROOT)
+        subprocess.run(['gh','release','download',BASE,'--repo','Kafrika-Labs/chickadee_studio','--pattern',ARCHIVE,'--dir',str(folder)],check=True,cwd=ROOT)
     with archive.open('rb') as stream:
         if hashlib.file_digest(stream,'sha256').hexdigest()!=EXPECTED:raise ValueError('Pinned runtime archive SHA256 mismatch')
     prefixes={f'Chickadee-0.10.11/resources/laya/':ROOT/f'artifacts/laya-{args.version}/ChickadeeLaya',

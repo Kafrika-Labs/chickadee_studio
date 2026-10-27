@@ -128,7 +128,7 @@ class FollowupTests(unittest.TestCase):
             bridge.command('load', {'path': str(path)})
             insight = bridge.command('inspection', {'run_id': bridge.run_id})
             self.assertTrue(any(n['id'].startswith('agent_') for n in insight['graph']['nodes']))
-            self.assertTrue(any(e['label'] == 'Groq 추가 확인' for e in insight['graph']['edges']))
+            self.assertTrue(any(e['label'] == 'AI 추가 확인' for e in insight['graph']['edges']))
             self.assertEqual(insight['agent']['ledger']['calls'], 4)
             self.assertNotIn('test_key_not_real', path.with_name('agent.json').read_text(encoding='utf-8'))
             ScanOutcome.load(path)

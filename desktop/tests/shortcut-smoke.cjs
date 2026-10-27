@@ -1,3 +1,5 @@
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const { launch } = require('./source-ui-harness.cjs');
 const assert = require('node:assert/strict');
 const path = require('node:path');

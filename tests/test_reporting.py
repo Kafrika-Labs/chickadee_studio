@@ -41,5 +41,5 @@ class ReportTests(unittest.TestCase):
     def test_scan_report_available_without_paid_review(self):
         output = review_report({'meta': {}, 'findings': []}, {'status': 'cancelled'}, {})
         self.assertIn('미실행', output['markdown'])
-        self.assertIn('아직 Groq 검토 결과가 없습니다', output['markdown'])
+        self.assertIn('아직 AI 검토 결과가 없습니다', output['markdown'])
         self.assertNotIn('전체 검토 완료', output['markdown'])

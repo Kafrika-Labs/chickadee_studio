@@ -1,14 +1,28 @@
-.settings-modal .runtime-settings { border-top:0; border-bottom:1px solid #303033; padding:0 0 20px; margin:0 0 22px; font-size:12px; }
-.settings-modal .runtime-settings > summary { display:flex; justify-content:flex-start; gap:12px; cursor:pointer; color:#e4e4e7; font-weight:500; text-align:left; }
-.settings-modal .runtime-settings > summary span { margin-left:auto; color:#aaaab3; font-weight:400; }
-.runtime-settings dl { display:grid; grid-template-columns:110px 1fr; gap:10px 16px; margin:18px 0; }
+.settings-modal .runtime-settings { border:0; padding:0; margin:0; font-size:12px; }
+.settings-modal .runtime-settings > summary { display:flex; align-items:center; gap:12px; box-sizing:border-box; min-height:36px; padding:0 10px; border:1px solid #404044; border-radius:4px; background:#202023; cursor:pointer; color:#e4e4e7; font-weight:400; text-align:left; }
+.settings-modal .runtime-settings > summary span { order:-1; }
+.settings-modal .runtime-settings > summary::before { margin-left:auto; }
+.runtime-content { padding:16px 0 0; }
+.runtime-settings dl { display:grid; grid-template-columns:minmax(110px, 1fr) minmax(0, 2fr); gap:0 24px; margin:0; }
 .runtime-settings dt { color:#aaaab3; }
-.runtime-settings dd { margin:0; color:#e4e4e7; font-variant-numeric:tabular-nums; }
-.runtime-mode { display:flex; gap:6px; }
-.runtime-mode button { min-width:74px; min-height:32px; border:1px solid #45454c; border-radius:2px; background:#252528; color:#c8c8d0; font:inherit; cursor:pointer; }
-.runtime-mode button[aria-pressed="true"] { border-color:#aaaab3; color:#fff; background:#333338; }
+.runtime-settings dd { margin:0; color:#e4e4e7; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.runtime-hardware dt, .runtime-hardware dd { padding:7px 0; }
+.runtime-mode-heading { margin:22px 0 10px; font-weight:500; color:#e4e4e7; }
+.runtime-mode { display:flex; gap:0; width:300px; max-width:100%; }
+.runtime-mode button { flex:1; min-width:0; min-height:36px; border:1px solid #45454c; border-radius:0; background:transparent; color:#c8c8d0; font:inherit; cursor:pointer; }
+.runtime-mode button + button { margin-left:-1px; }
+.runtime-mode button:first-child { border-radius:3px 0 0 3px; }
+.runtime-mode button:last-child { border-radius:0 3px 3px 0; }
+.runtime-mode button[aria-pressed="true"] { position:relative; border-color:#aaaab3; color:#fff; background:#303033; }
 .runtime-settings button:disabled { opacity:.45; cursor:default; }
-.runtime-mode-description, .runtime-info { margin:10px 0; color:#aaaab3; font-size:11px; line-height:1.6; }
-.runtime-actions { display:flex; gap:12px; }
-.runtime-actions button { min-height:32px; padding:0 10px; border:1px solid #45454c; border-radius:2px; background:#252528; color:#e4e4e7; font:inherit; cursor:pointer; }
+.runtime-mode-description, .runtime-info { margin:10px 0; color:#aaaab3; font-size:11px; line-height:1.7; }
+.runtime-settings .runtime-features { margin:22px 0 16px; border-top:1px solid #303033; }
+.runtime-features dt, .runtime-features dd { padding:12px 0; border-bottom:1px solid #303033; }
+.runtime-actions { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 16px; }
+.runtime-actions button { min-height:34px; padding:0 12px; border:1px solid #45454c; border-radius:3px; background:transparent; color:#e4e4e7; font:inherit; cursor:pointer; }
+.runtime-actions button:hover:not(:disabled), .runtime-mode button:hover:not(:disabled) { background:#303033; }
 .runtime-settings button:focus-visible, .runtime-settings summary:focus-visible { outline:2px solid #527db1; outline-offset:3px; }
+.runtime-content > .runtime-info:last-child { margin:16px 0 0; }
+@media (max-width:520px) {
+  .runtime-settings dl { grid-template-columns:110px minmax(0, 1fr); gap:0 12px; }
+}

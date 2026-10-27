@@ -24,7 +24,7 @@ def review_report(result, scan, agent):
              f"- 광고 문맥 후보: {scan.get('candidate_count', 0)}개", '', '## AI 검토 요약', '',
              f"- 검토 상태: {STATUS.get(review.get('status'), '미실행')}",
              f'- 수집 영역: {total}개 / 검토 완료: {completed}개 / 미검토: {max(0, total-completed)}개',
-             f"- Groq 요청: {ledger.get('calls', 0)} / {ledger.get('call_limit', 6)}회",
+             f"- AI 요청: {ledger.get('calls', 0)} / {ledger.get('call_limit', 6)}회",
              f"- 한도 차감 토큰: {ledger.get('charged_tokens', 0)} / {ledger.get('token_limit', 24000)}",
              '- 의심 근거를 우선 검토합니다. 미검토 항목은 정상으로 판정하지 않습니다.',
              '- AI 의견과 모델 점수는 위법 여부의 확정 판정이 아닙니다. 원문과 문맥을 함께 확인하세요.']
@@ -61,7 +61,7 @@ def review_report(result, scan, agent):
                 lines += ['저장된 이미지 근거:', '']
     lines += ['', '## 항목별 AI 검토', '']
     if not assessments:
-        lines += ['아직 Groq 검토 결과가 없습니다. 위 검사 통계는 로컬 검사 결과입니다.']
+        lines += ['아직 AI 검토 결과가 없습니다. 위 검사 통계는 로컬 검사 결과입니다.']
     for index, item in enumerate(assessments, 1):
         ids = item.get('evidence_ids', [])
         source = next((packets[i] for i in ids if i in packets), {})

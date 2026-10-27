@@ -1,4 +1,4 @@
-"""Groq-only agent with bounded, host-validated follow-up collection."""
+"""Multi-provider agent with bounded, host-validated follow-up collection."""
 from copy import deepcopy
 import json
 import re
@@ -11,6 +11,7 @@ from urllib.parse import urlsplit
 from jsonschema import Draft202012Validator
 from .detection import analyze_element
 from . import __version__
+from .ai_providers import PROVIDERS, encode_request, decode_response
 
 ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions'
 DEFAULT_MODEL = 'openai/gpt-oss-20b'
@@ -72,17 +73,23 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def groq_request(payload, key, timeout):
-    # No arbitrary base URL, proxy, alternate provider, browser/search or code tool.
+    return provider_request('groq', payload, key, timeout)
+
+
+def provider_request(provider, payload, key, timeout):
+    # Fixed official endpoint per provider; no redirects or inherited proxies.
+    body, auth = encode_request(provider, payload, key)
+    name = PROVIDERS[provider]['name']
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
-    request = urllib.request.Request(ENDPOINT, json.dumps(payload, ensure_ascii=False).encode('utf-8'),
-                                     headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json',
+    request = urllib.request.Request(ENDPOINT if provider == 'groq' else PROVIDERS[provider]['endpoint'], json.dumps(body, ensure_ascii=False).encode('utf-8'),
+                                     headers={**auth, 'Content-Type': 'application/json',
                                               'User-Agent': 'Chickadee/' + __version__}, method='POST')
     try:
         with opener.open(request, timeout=timeout) as response:
             raw = response.read(524289)
             if len(raw) > 524288:
-                raise ValueError('Groq 응답 크기 한도 초과')
-            return json.loads(raw)
+                raise ValueError(f'{name} 응답 크기 한도 초과')
+            return decode_response(provider, json.loads(raw))
     except urllib.error.HTTPError as error:
         code = ''
         try:
@@ -91,42 +98,47 @@ def groq_request(payload, key, timeout):
             if isinstance(candidate, str) and re.fullmatch(r'[a-zA-Z0-9_:-]{1,80}', candidate): code = ' (' + candidate + ')'
         except (ValueError, OSError, AttributeError):
             pass
-        raise ValueError(f'Groq HTTP {error.code}{code}. 재시도 없이 중단했습니다.') from None
-    except (OSError, ValueError) as error:
-        if isinstance(error, ValueError) and str(error).startswith('Groq 응답'):
+        raise ValueError(f'{name} HTTP {error.code}{code}. 재시도 없이 중단했습니다.') from None
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        if isinstance(error, ValueError) and str(error).startswith(name + ' 응답'):
             raise
-        raise ValueError('Groq 응답 또는 연결 오류. 재시도 없이 중단했습니다.') from None
+        raise ValueError(f'{name} 응답 또는 연결 오류. 재시도 없이 중단했습니다.') from None
 
 
 def settings(value):
-    if not isinstance(value, dict) or set(value) - {'api_key', 'model', 'token_limit', 'call_limit'}:
-        raise ValueError('Groq 설정 형식 오류')
+    if not isinstance(value, dict) or set(value) - {'provider', 'api_key', 'model', 'token_limit', 'call_limit'}:
+        raise ValueError('AI 설정 형식 오류')
+    provider = value.get('provider', 'groq')
+    if not isinstance(provider, str) or provider not in PROVIDERS:
+        raise ValueError('지원하지 않는 AI 제공자입니다.')
     key = value.get('api_key', '')
-    model = value.get('model', DEFAULT_MODEL)
+    model = value.get('model', PROVIDERS[provider]['model'])
     if isinstance(key, str) and key.startswith('xai-'):
-        raise ValueError('Groq API 키를 입력하세요. 다른 제공자는 사용하지 않습니다.')
+        raise ValueError('선택한 제공자의 API 키를 입력하세요.')
     if not isinstance(key, str) or not 10 <= len(key) <= 500 or any(c.isspace() for c in key):
-        raise ValueError('AI 연결 설정에서 Groq API 키를 입력하세요.')
+        raise ValueError('AI 연결 설정에서 선택한 제공자의 API 키를 입력하세요.')
     if not isinstance(model, str) or not re.fullmatch(r'[A-Za-z0-9_./-]{1,120}', model):
-        raise ValueError('Groq 모델 이름이 올바르지 않습니다.')
+        raise ValueError('AI 모델 이름이 올바르지 않습니다.')
     limits = {k: value.get(k, default) for k, default in [('token_limit', 24000), ('call_limit', 6)]}
     if type(limits['token_limit']) is not int or not 1000 <= limits['token_limit'] <= 60000:
         raise ValueError('누적 토큰 한도는 1000~60000입니다.')
     if type(limits['call_limit']) is not int or not 1 <= limits['call_limit'] <= 12:
         raise ValueError('누적 호출 한도는 1~12회입니다.')
-    return {'api_key': key, 'model': model, **limits}
+    return {'provider': provider, 'api_key': key, 'model': model, **limits}
 
 
 class EvidenceAgent:
     def __init__(self, config, ledger=None, *, transport=None, stop=None, emit=None, persist=None):
         self.config = settings(config)
-        self.transport = transport or groq_request
+        self.transport = transport or (groq_request if self.config['provider'] == 'groq' else
+            lambda payload, key, timeout: provider_request(self.config['provider'], payload, key, timeout))
+        self.tool_definitions = []
         self.stop = stop or Event()
         self.emit = emit or (lambda value: None)
         self.persist = persist or (lambda ledger: None)
         self.ledger = deepcopy(ledger or {'calls': 0, 'charged_tokens': 0, 'usage_tokens': 0})
         if any(type(self.ledger.get(k)) is not int or self.ledger[k] < 0 for k in ('calls', 'charged_tokens', 'usage_tokens')):
-            raise ValueError('Groq 사용량 기록 형식 오류')
+            raise ValueError('AI 사용량 기록 형식 오류')
         if type(self.ledger.get('site_visits', 0)) is not int or not 0 <= self.ledger.get('site_visits', 0) <= 6:
             raise ValueError('추가 탐색 사용량 기록 형식 오류')
         for name in ('token_limit', 'call_limit'):
@@ -141,14 +153,17 @@ class EvidenceAgent:
         if self.config['model'].startswith('openai/gpt-oss-'):
             payload['reasoning_effort'] = 'low'
         if tools:
+            self.tool_definitions = tools
             payload.update(tools=tools, tool_choice='required', parallel_tool_calls=True)
+        if final and self.config['provider'] == 'anthropic':
+            payload['_tool_definitions'] = self.tool_definitions
         if final:
             payload['response_format'] = {'type': 'json_object'}
         # UTF-8 byte count plus overhead is deliberately conservative. Reserve
         # before sending; failed/missing-usage calls retain their reservation.
         reserve = len(json.dumps(payload, ensure_ascii=False).encode('utf-8')) + payload['max_completion_tokens'] + 1024
         if self.ledger['calls'] >= self.ledger['call_limit'] or self.ledger['charged_tokens'] + reserve > self.ledger['token_limit']:
-            raise ValueError('Groq 누적 호출·토큰 한도에 도달했습니다. 요청하지 않았습니다.')
+            raise ValueError('AI 누적 호출·토큰 한도에 도달했습니다. 요청하지 않았습니다.')
         self.ledger['calls'] += 1
         self.ledger['charged_tokens'] += reserve
         self.persist(deepcopy(self.ledger))
@@ -170,7 +185,7 @@ class EvidenceAgent:
                 raise ValueError()
             return choice['message']
         except (KeyError, IndexError, TypeError, ValueError):
-            raise ValueError('Groq 응답이 불완전하거나 거부되었습니다.') from None
+            raise ValueError('AI 응답이 불완전하거나 거부되었습니다.') from None
 
     def investigate(self, packet):
         return self.investigate_with_exploration(packet)
@@ -260,7 +275,7 @@ class EvidenceAgent:
 
     def _investigate_collected(self, packet):
         if self.ledger['call_limit'] - self.ledger['calls'] < 2:
-            raise ValueError('Groq 분석에는 최소 2회 호출 여유가 필요합니다. 요청하지 않았습니다.')
+            raise ValueError('AI 분석에는 최소 2회 호출 여유가 필요합니다. 요청하지 않았습니다.')
         evidence_id = packet['id']
         allowed = {'type': 'object', 'properties': {'evidence_id': {'enum': [evidence_id]}},
                    'required': ['evidence_id'], 'additionalProperties': False}
@@ -289,7 +304,7 @@ class EvidenceAgent:
                 args = json.loads(call['function']['arguments'])
                 call_id = call['id']
             except (KeyError, TypeError, ValueError):
-                raise ValueError('Groq 도구 요청 형식 오류') from None
+                raise ValueError('AI 도구 요청 형식 오류') from None
             if name not in descriptions or not isinstance(call_id, str) or len(call_id) > 200:
                 raise ValueError('허용되지 않은 에이전트 도구')
             Draft202012Validator(allowed).validate(args)
@@ -341,6 +356,6 @@ class EvidenceAgent:
             result.update(assessment='uncertain', recommended_next_action='collect_more_evidence')
             result['missing_evidence'] = list(dict.fromkeys([*result['missing_evidence'], '충분한 동일 영역 문맥']))
         result['summary'] = redact(result['summary'])
-        return {**result, 'provider': 'groq', 'model': self.config['model'], 'reads': reads,
+        return {**result, 'provider': self.config['provider'], 'model': self.config['model'], 'reads': reads,
                 'text_sha256': packet['text_sha256'], 'snapshot_id': packet.get('last_snapshot_id') or packet.get('snapshot_id'),
                 'ledger': deepcopy(self.ledger), 'status': 'completed'}

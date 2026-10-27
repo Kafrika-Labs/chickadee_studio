@@ -1,4 +1,6 @@
 // Drop the real completion event to verify renderer recovery from durable history.
+// These assertions use Korean UI text; English is covered by i18n.test.cjs.
+process.env.CHICKADEE_LANGUAGE ??= "ko";
 const {launch}=require('./source-ui-harness.cjs');
 const http=require('node:http');
 const path=require('node:path');
