@@ -33,6 +33,7 @@
 
 ## 릴리스 노트
 
+- [0.10.20](releases/0.10.20.ko.md)
 - [0.10.18](releases/0.10.18.ko.md)
 - [0.10.16](releases/0.10.16.ko.md)
 - [0.10.15](releases/0.10.15.ko.md)

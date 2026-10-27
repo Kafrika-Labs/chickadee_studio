@@ -1771,19 +1771,22 @@
 .record-overview .ocr-source-badge { margin-left: 0; }
 .results-layout .list-toolbar > .action-menu { flex: 0 0 auto; }
 .results-layout > .table-section { container-type:inline-size; container-name:results-list; }
-.results-layout .results-filters-toolbar { display:grid; grid-template-columns:minmax(160px,1fr) auto auto auto auto; gap:8px; }
-.results-layout .results-filters-toolbar .search { width:100%; min-width:0; }
+.results-layout .results-filters-toolbar { display:grid; grid-template-columns:minmax(160px,480px) auto minmax(0,1fr) auto auto; gap:8px; }
+.results-layout .results-filters-toolbar .search { width:100%; min-width:0; max-width:none; margin-left:0; }
 .results-layout .results-filters-toolbar .menu-trigger { display:inline-flex; align-items:center; justify-content:space-between; gap:8px; height:32px; min-height:32px; padding:0 10px; border:1px solid #d4d9df; border-radius:3px; background:#fff; color:#505b67; font-size:12px; }
 .results-layout .results-filters-toolbar .result-category-menu .menu-trigger { min-width:164px; }
 .results-layout .results-filters-toolbar .menu-trigger > svg { flex-shrink:0; }
 .results-filters-toolbar .result-category-menu .action-menu-panel { left:0; right:auto; transform-origin:top left; }
 .results-layout .results-filters-toolbar > .button { margin-left:0; white-space:nowrap; }
+.results-layout .results-filters-toolbar > .button:nth-last-child(2) { grid-column:4; }
 @container results-list (max-width:700px) {
-  .results-layout .results-filters-toolbar { grid-template-columns:minmax(164px,1.3fr) minmax(112px,1fr) minmax(100px,1fr) auto; }
-  .results-filters-toolbar > .search { grid-column:1 / -1; }
+  .results-layout .results-filters-toolbar { grid-template-columns:minmax(0,480px) auto; }
+  .results-filters-toolbar > .search { grid-column:auto; }
+  .results-layout .results-filters-toolbar > .button:nth-last-child(2) { grid-column:1; justify-self:end; }
   .results-layout .results-filters-toolbar .menu-trigger { width:100%; min-width:0; }
 }
 .results-layout .list-toolbar .menu-trigger { white-space: nowrap; flex: 0 0 auto; min-width: 80px; }
+.results-layout .results-filters-toolbar .result-filters-menu .menu-trigger { min-width:32px; justify-content:center; padding:0 8px; }
 .evidence-cell .ocr-source-badge { margin: 0 6px 0 0; }
 .record-overview .menu-trigger { width: 26px; height: 28px; min-height: 28px; border: 0; background: transparent; color: #687583; padding: 0; }
 .record-panel .record-body > label { display: block; margin: 18px 0 8px; color: #505b67; font-size: 12px; font-weight: 600; letter-spacing: 0; }
@@ -1834,7 +1837,7 @@
 .active .path-tab-count { background: #e5eaef; color: #354250; }
 .path-discovered { display: inline-flex; align-items: center; gap: 7px; color: #737e89; font-size: 11px; white-space: nowrap; }
 .path-discovered strong { color: #56616d; font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.content-area[data-view="pages"] .search { height: 32px; background: #fafafa; border-color: #d4d9df; border-radius: 3px; }
+.content-area[data-view="pages"] .search { flex: 1; max-width: 480px; height: 32px; background: #fafafa; border-color: #d4d9df; border-radius: 3px; }
 .content-area[data-view="pages"] .search input { color: #505b67; font-size: 12px; }
 .content-area[data-view="pages"] .search:focus-within { outline: 2px solid #2563a6; outline-offset: 1px; }
 .content-area[data-view="activity"],
@@ -2596,3 +2599,8 @@
 .record-panel .capture-metadata dd { color: #56616e; font-size: 11px; }
 .record-panel .capture-metadata dd.capture-hash { color: #7b8796; font-size: 10px; }
 @media (prefers-reduced-motion: reduce) { .capture-metadata-chevron { transition: none; } }
+
+.result-filters-menu .action-menu-panel { min-width:190px; max-height:min(560px,70vh); overflow-y:auto; }
+.action-menu-panel .menu-section-label { padding:8px 10px 4px; font-size:11px; font-weight:600; color:#697580; }
+.action-menu-panel .menu-section-label:not(:first-child) { margin-top:4px; border-top:1px solid #e5e8eb; }
+.result-filters-menu [aria-checked="true"] { background:#f0f3f6; font-weight:600; }

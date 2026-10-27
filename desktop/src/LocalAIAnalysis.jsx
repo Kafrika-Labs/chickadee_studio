@@ -1,5 +1,6 @@
 import React from "react";
 import { t } from "./i18n.mjs";
+import { eventText } from "./event-text.mjs";
 
 const labels = { ad_context: t("광고 문맥 유사"), phishing_pattern: t("피싱 화면 유사"), review: t("추가 신호 미확인"), no_features: t("일치 특징 없음") };
 export default function LocalAIAnalysis({ analysis }) {
@@ -16,7 +17,7 @@ export default function LocalAIAnalysis({ analysis }) {
       </dd></React.Fragment>;
     })}</dl>
     <details><summary>{t("분석 정보")}</summary>
-      {Object.values(analysis).map((item, i) => <p key={i}>{item.model || item.message}{item.version ? ` · ${item.version}` : ""}{item.model && item.status !== "completed" && item.message ? ` · ${item.message}` : ""}</p>)}
+      {Object.values(analysis).map((item, i) => <p key={i}>{eventText(item.model || item.message)}{item.version ? ` · ${item.version}` : ""}{item.model && item.status !== "completed" && item.message ? ` · ${eventText(item.message)}` : ""}</p>)}
       {analysis.text?.matched_features?.length > 0 && <p>{t("일치 특징:")} {analysis.text.matched_features.join(" · ")}</p>}
       <p>{t("로컬 처리 · API 사용 없음")}</p>
     </details>

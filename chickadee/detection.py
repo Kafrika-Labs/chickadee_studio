@@ -7,6 +7,7 @@ from functools import lru_cache
 import json
 from pathlib import Path
 from .unicode_security import fold_letters, DATA as UNICODE_DATA
+from .variants import find_variants
 
 LABELS = {
     "HOMOGLYPH": "닮은꼴 글자 위장",
@@ -142,6 +143,23 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
                                 "homoglyph": any(f[0] for f in flags[start:end]),
                                 "jamo": any(f[1] for f in flags[start:end])})
     unique = {tuple(m["source_span"]) + (m["keyword"],): m for m in reversed(matches)}
+    for variant in find_variants(text, rules.keywords):
+        first, last = variant['source_span']
+        # Punctuation inside an obfuscated word is not a sentence boundary.
+        before = max((n for n in boundaries if n < first), default=-1)
+        after = min((n for n in boundaries if n >= last), default=len(text))
+        raw_context = text[max(before + 1, first - 160):min(after, last + 160)]
+        context = skeleton(fold_letters(raw_context.translate(LOOKALIKES)))
+        exclusions = [term for term in rules.prevention if skeleton(term) in context]
+        if is_editorial_context(raw_context) or (exclusions and (
+                any(term not in {'예방', '주의', '금지', '차단'} for term in exclusions)
+                or not DIRECT_CTA_RE.search(raw_context))):
+            continue
+        if not any(skeleton(term) in context for term in rules.promotion):
+            continue
+        key = (first, last, variant['keyword'])
+        previous = unique.get(key, {'homoglyph': False, 'jamo': False})
+        unique[key] = {**previous, **variant}
     contextual = []
     for token in re.finditer(r"[^\W_]+", text):
         raw = token.group()
@@ -166,7 +184,7 @@ def analyze(text: str, rules: Rules | None = None) -> dict:
         scripts = {unicodedata.name(c, '').split(' ')[0] for c in text[first:last] if c.isalpha()}
         if len(scripts & {'LATIN', 'CYRILLIC', 'GREEK'}) > 1:
             additional.append({"pattern": "MIXED_SCRIPT", "source_span": [first, last]})
-    return {"is_advertisement": bool(matches), "matches": list(unique.values()),
+    return {"is_advertisement": bool(unique), "matches": list(unique.values()),
             "contextual_homoglyphs": contextual, "additional_patterns": additional, "rules_version": rules.version,
             "unicode_data_version": UNICODE_DATA['unicode_version']}
 

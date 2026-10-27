@@ -33,6 +33,7 @@ The interface and screenshots are in Korean. English guides retain key control l
 
 ## Release notes
 
+- [0.10.20](releases/0.10.20.md)
 - [0.10.18](releases/0.10.18.md)
 - [0.10.16](releases/0.10.16.md)
 - [0.10.15](releases/0.10.15.md)

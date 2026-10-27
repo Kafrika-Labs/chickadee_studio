@@ -3,6 +3,7 @@ import { LANGUAGES, language, t, tc } from "./i18n.mjs";
 import { advertisingGroup, normalizeCandidates } from "./advertising-groups.mjs";
 import { groupPageRecords, pageReview, expandPageIds, evidenceRole } from "./page-records.mjs";
 import { sortDetections } from "./result-list.mjs";
+import { eventText, eventKindLabel } from "./event-text.mjs";
 import React, {
   useState,
   useId,
@@ -466,7 +467,9 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
             }
           }}
         >
-          {items.map((item) => (
+          {items.map((item) => item.heading ? (
+            <div className="menu-section-label" role="presentation" key={item.heading}>{item.heading}</div>
+          ) : (
             <button
               role={typeof item.selected === "boolean" ? "menuitemradio" : "menuitem"}
               aria-checked={typeof item.selected === "boolean" ? item.selected : undefined}
@@ -910,7 +913,7 @@ function App() {
       if (event.kind === "error") {
         setStatus("failed");
         setActive(null);
-        tell(event.message, "error");
+        tell(eventText(event.message), "error");
       }
     });
   }, [appendEvent, applyOutcome]);
@@ -1982,28 +1985,26 @@ function App() {
                     />
                   </div>
                   <ActionMenu
-                    className="result-category-menu"
-                    label={t("탐지 분류 필터: {value}", { value: {all:t("전체"), required:t("필수 탐지"), general_ads:t("일반 광고"), illegal_suspected:t("불법 의심"), image_review:t("이미지 검토")}[filter] || t("전체") })}
-                    triggerText={t("분류: {value}", { value: {all:t("전체"), required:t("필수 탐지"), general_ads:t("일반 광고"), illegal_suspected:t("불법 의심"), image_review:t("이미지 검토")}[filter] || t("전체") })}
-                    items={[["all", t("전체"), "ListFilter"], ["required", t("필수 탐지"), "Fingerprint"], ["general_ads", t("일반 광고"), "ShoppingCart"], ["illegal_suspected", t("불법 의심"), "ShieldAlert"], ["image_review", t("이미지 검토"), "ScanSearch"]].map(([id, label, icon]) => ({label, icon, selected:filter === id, action:() => setFilter(id)}))}
+                    className="result-filters-menu"
+                    label={t("필터 및 정렬")}
+                    triggerIcon="ListFilter"
+                    triggerText={[filter !== "all", reviewFilter !== "all", recordOrder !== "newest"].filter(Boolean).length || undefined}
+                    items={[
+                      { heading: t("분류") },
+                      ...[["all", t("전체")], ["required", t("필수 탐지")], ["general_ads", t("일반 광고")], ["illegal_suspected", t("불법 의심")], ["image_review", t("이미지 검토")]].map(([id, label]) => ({ label, selected: filter === id, action: () => setFilter(id) })),
+                      { heading: t("검토 상태") },
+                      ...[["all", t("검토 전체")], ...Object.entries(REVIEW_LABELS)].map(([id, label]) => ({ label, selected: reviewFilter === id, action: () => setReviewFilter(id) })),
+                      { heading: t("정렬 방식") },
+                      ...[["newest", t("최신순")], ["oldest", t("오래된순")]].map(([id, label]) => ({ label, selected: recordOrder === id, action: () => setRecordOrder(id) })),
+                    ]}
                   />
-                  <ActionMenu
-                    className="review-filter-menu"
-                    label={t("검토 상태 필터: {value}", { value: reviewFilter === "all" ? t("검토 전체") : REVIEW_LABELS[reviewFilter] })}
-                    triggerText={reviewFilter === "all" ? t("검토 전체") : REVIEW_LABELS[reviewFilter]}
-                    items={[["all", t("검토 전체")], ...Object.entries(REVIEW_LABELS)].map(([id, label]) => ({
-                      label,
-                      selected: reviewFilter === id,
-                      action: () => setReviewFilter(id),
-                    }))}
-                  />
-                  <ActionMenu
-                    label={t("정렬 방식")}
-                    triggerText={recordOrder === "newest" ? t("최신순") : t("오래된순")}
-                    items={[["newest", t("최신순")], ["oldest", t("오래된순")]].map(([id, label]) => ({ label,
-                      selected: recordOrder === id, action: () => setRecordOrder(id),
-                    }))}
-                  />
+                  <Button
+                    icon="RotateCcw"
+                    disabled={filter === "all" && reviewFilter === "all" && recordOrder === "newest"}
+                    onClick={() => { setFilter("all"); setReviewFilter("all"); setRecordOrder("newest"); }}
+                  >
+                    {t("필터 초기화")}
+                  </Button>
                   <Button
                     icon="Download"
                     disabled={!outcome || running}
@@ -2705,7 +2706,7 @@ function eventLabel(event) {
         event.action === "scroll"
           ? "MousePointer2"
           : DEFINITIONS[event.stage]?.icon || "Activity",
-      title: event.message,
+      title: eventText(event.message),
       detail: event.selector || relativeUrl(event.url),
       tone: "teal",
     };
@@ -2719,7 +2720,7 @@ function eventLabel(event) {
   if (event.kind === "request_blocked")
     return {
       icon: "ShieldX",
-      title: event.reason,
+      title: eventText(event.reason),
       detail: event.url,
       tone: "amber",
     };
@@ -2757,7 +2758,7 @@ function eventLabel(event) {
     icon: ["error", "warning"].includes(event.kind)
       ? "CircleAlert"
       : "Activity",
-    title: event.message || event.kind,
+    title: eventText(event.message) || eventKindLabel(event.kind),
     detail: event.url,
     tone: ["error", "warning"].includes(event.kind) ? "amber" : "gray",
   };
@@ -2862,6 +2863,16 @@ function RecordDetail({
   const additionalTypes = [...new Set([...(record.techniques || []), ...(record.categories || [])])]
     .filter(type => type !== (record.technique || record.category));
   for (const match of detail.analysis?.matches || []) {
+    if (match.variant_methods?.length) {
+      const methods = { unicode: t("유니코드 변형"), invisible_or_combining: t("보이지 않는 문자·결합 문자"),
+        spacing: t("띄어쓰기 변형"), symbols: t("기호 삽입"), phonetic: t("발음 변형"),
+        substitution: t("숫자·영문 치환"), initials: t("초성 표기"), keyboard: t("한영 자판 변환") };
+      reasons.push(t("키워드 ‘{keyword}’ · 변형 표기: {original} → {canonical} ({methods})", {
+        keyword: match.keyword, original: match.original, canonical: match.canonical,
+        methods: match.variant_methods.map(method => methods[method] || method).join(" · "),
+      }));
+      continue;
+    }
     if (
       (record.technique === "HOMOGLYPH" && match.homoglyph) ||
       (record.technique === "JAMO" && match.jamo)

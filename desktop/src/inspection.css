@@ -220,6 +220,18 @@
 .local-ai-analysis dd span { color:#6b7786; font-variant-numeric:tabular-nums; }
 .local-ai-analysis details { font-size:11px; color:#697586; }
 .local-ai-analysis details p { margin:7px 0; font-size:11px; overflow-wrap:anywhere; }
+.record-panel .local-ai-analysis { padding:12px; border:1px solid #e2e5e9; border-radius:6px; background:#fafbfc; }
+.record-panel .local-ai-analysis > label { display:block; margin:0; color:#394654; font-size:12px; font-weight:600; }
+.record-panel .local-ai-analysis dl { grid-template-columns:minmax(0,1fr); gap:6px; margin:14px 0; }
+.record-panel .local-ai-analysis dt:not(:first-child) { margin-top:10px; }
+.record-panel .local-ai-analysis dd { justify-content:flex-start; align-items:center; max-width:none; gap:6px 10px; text-align:left; }
+.record-panel .local-ai-analysis dd strong { padding:3px 8px; border:1px solid #dce2e8; border-radius:4px; background:#fff; font-size:11px; line-height:1.5; }
+.record-panel .local-ai-analysis dd strong[data-label="unavailable"] { color:#75808b; background:#f0f2f4; border-color:transparent; }
+.record-panel .local-ai-analysis dd strong[data-label="ad_context"], .record-panel .local-ai-analysis dd strong[data-label="phishing_pattern"] { color:#8b5b1e; background:#fff7e9; border-color:#efdbb8; }
+.record-panel .local-ai-analysis details { border-top:1px solid #e2e5e9; padding-top:10px; }
+.record-panel .local-ai-analysis summary { cursor:pointer; padding:3px 0; color:#536272; font-size:11px; }
+.record-panel .local-ai-analysis summary:hover { color:#253c56; }
+.record-panel .local-ai-analysis summary:focus-visible { outline:2px solid #2563a6; outline-offset:3px; border-radius:2px; }
 .local-ai-overview { margin-bottom:20px; border:1px solid #3a3e45; border-radius:4px; background:#202226; }
 .local-ai-overview-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; padding:18px; }
 .local-ai-status-title { color:#dce3ed; font-size:13px; font-weight:500; }
