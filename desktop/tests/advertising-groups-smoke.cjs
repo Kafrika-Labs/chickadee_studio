@@ -27,7 +27,7 @@ const {launch} = require('./native-app.cjs');
     await page.locator('nav button').filter({hasText: '탐지 내역'}).click();
     const toolbar = page.locator('.list-toolbar');
     async function chooseCategory(label) {
-      await toolbar.getByRole('button', {name: /^탐지 분류 필터:/}).click();
+      await toolbar.getByRole('button', {name: '필터 및 정렬', exact: true}).click();
       await toolbar.getByRole('menuitemradio', {name: label, exact:true}).click();
     }
     await chooseCategory('일반 광고');
@@ -50,11 +50,11 @@ const {launch} = require('./native-app.cjs');
     await page.setViewportSize({width:1120, height:800});
     for (const label of ['전체', '필수 탐지', '일반 광고', '불법 의심', '이미지 검토']) {
       await chooseCategory(label);
-      const fits = await toolbar.locator('.result-category-menu .menu-trigger').evaluate(el => {
-        const button = el.getBoundingClientRect(), text = el.querySelector('span').getBoundingClientRect(), icon = el.querySelector('svg').getBoundingClientRect();
-        return text.right <= icon.left && icon.right <= button.right && el.scrollWidth <= el.clientWidth;
+      const fits = await toolbar.locator('.result-filters-menu .menu-trigger').evaluate(el => {
+        const button = el.getBoundingClientRect(), text = el.querySelector('span')?.getBoundingClientRect(), icon = el.querySelector('svg').getBoundingClientRect();
+        return (!text || text.right <= icon.left) && icon.right <= button.right && el.scrollWidth <= el.clientWidth;
       });
-      assert.ok(fits, `Category label clipped: ${label}`);
+      assert.ok(fits, `Filter icon or active count clipped: ${label}`);
     }
     assert.ok(await toolbar.evaluate(el => el.scrollWidth <= el.clientWidth), 'Filter toolbar must fit with detail open');
     await page.screenshot({path:path.join(root, 'artifacts/results-filters-compact.png')});
