@@ -46,9 +46,10 @@ export default function EvidenceScreenshot({ screenshot, hidden = false, caption
     catch { setError(t("앱을 재실행한 뒤 다시 시도해 주세요.")); }
   };
   return <figure className="evidence-capture">
-    <figcaption><span>{caption}</span><button type="button" className="capture-enlarge" onClick={() => setExpanded(true)} aria-label={t("참고 화면 크게 보기")}><ZoomIn size={13} aria-hidden="true" />{t("확대")}</button></figcaption>
+    <figcaption><span>{caption}</span></figcaption>
     <button className="evidence-capture-frame" type="button" aria-label={t("스크린샷 확대")} aria-haspopup="dialog" onClick={() => setExpanded(true)}>
       <span className="evidence-capture-image"><img src={screenshot.data_url} alt={t("검사 브라우저에서 촬영한 스크린샷")} /></span>
+      <span className="capture-zoom-overlay" aria-hidden="true"><ZoomIn size={14} />{t("확대")}</span>
     </button>
     <p className="evidence-capture-note capture-guidance">{hidden ? t("투명하거나 화면 밖의 요소는 보이지 않을 수 있습니다. 원문·CSS 근거를 함께 확인하세요.") : screenshot.capture === "target_element" ? t("탐지된 요소를 직접 촬영한 화면입니다.") : t("페이지 수집 당시의 참고 화면입니다. 탐지 문구의 정확한 위치를 촬영한 화면은 아닙니다.")}</p>
     <details className="capture-metadata"><summary><span>{t("촬영 정보")}</span><ChevronDown className="capture-metadata-chevron" size={14} aria-hidden="true" /></summary>

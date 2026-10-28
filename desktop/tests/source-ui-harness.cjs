@@ -113,7 +113,7 @@ exports.launch = async ({ env }) => {
     if (method === "notificationState") return notifications.state();
     if (method === "saveNotifications") return notifications.save(value);
     if (method === "testNotification") return notifications.testDesktop();
-    const extensions = { inspection: "inspection", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop",
+    const extensions = { inspection: "inspection", siteAccess: "site-access", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop",
       environment: "runtime-info", configureRuntime: "runtime-configure", testRuntime: "runtime-test", analyzeContent: "content-analyze" };
     if (extensions[method]) return backend.request(extensions[method], value || {});
     if (method === "state")
@@ -201,7 +201,7 @@ exports.launch = async ({ env }) => {
           "resume",
           "stop",
           "capabilities",
-          "inspection", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "analyzeContent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
+          "inspection", "siteAccess", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "analyzeContent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
           "updateState", "checkUpdates", "downloadUpdate", "showUpdateFile", "openReleaseNotes",
           "preferences", "reloadLanguage",
           "history",

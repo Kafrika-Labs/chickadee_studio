@@ -1,4 +1,10 @@
 export default {
+  "실패 이유": "Failure reason",
+  "사이트가 검사 요청을 거부했습니다 (HTTP 403). 사이트의 접근 권한 또는 WAF 허용 설정을 확인하세요.": "The site rejected the scan request (HTTP 403). Check the site's access permissions or WAF allow rules.",
+  "저장된 검사 기록에서 확인된 오류입니다.": "Errors recorded during this scan are shown below.",
+  "이 기록에는 자세한 실패 원인이 저장되어 있지 않습니다.": "No detailed failure reason was saved for this scan.",
+  "취소": "Cancel",
+  "저장": "Save",
   "검토 상태": "Review status",
   "유니코드 변형": "Unicode variant",
   "보이지 않는 문자·결합 문자": "Invisible or combining characters",

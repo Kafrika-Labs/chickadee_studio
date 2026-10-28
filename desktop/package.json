@@ -1,6 +1,6 @@
 {
   "name": "chickadee-desktop",
-  "version": "0.10.20",
+  "version": "0.10.21",
   "description": "Chickadee visual website inspection workspace",
   "author": "Chickadee contributors",
   "license": "Apache-2.0",
@@ -30,7 +30,7 @@
     "appId": "org.chickadee.inspector",
     "productName": "Chickadee",
     "directories": {
-      "output": "../artifacts/electron-0.10.20"
+      "output": "../artifacts/electron-0.10.21"
     },
     "files": [
       "dist/**/*",
@@ -49,11 +49,11 @@
         "to": "chickadee.ico"
       },
       {
-        "from": "../artifacts/engine-0.10.20/ChickadeeEngine",
+        "from": "../artifacts/engine-0.10.21/ChickadeeEngine",
         "to": "engine"
       },
       {
-        "from": "../artifacts/laya-0.10.20/ChickadeeLaya",
+        "from": "../artifacts/laya-0.10.21/ChickadeeLaya",
         "to": "laya"
       },
       {

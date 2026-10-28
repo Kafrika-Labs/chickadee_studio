@@ -27,6 +27,14 @@ const fs = require('node:fs/promises');
   await page.getByRole('textbox',{name:'검사 대상 URL'}).fill('https://example.go.kr');
   await capture('start');
   await button('단계 설정 닫기').click();
+  if (process.argv.includes('--authentication')) {
+   await button('설정').click();
+   await button('인증').click();
+   await page.getByLabel('사이트 주소 (HTTPS)',{exact:true}).fill('https://example.com');
+   await page.getByRole('button',{name:'토큰 생성',exact:true}).click();
+   await capture('auth');
+   return;
+  }
   await page.locator('.react-flow__node[data-id="ocr"]').click();
   await capture('ocr'); await button('단계 설정 닫기').click();
   await button('검사 옵션').click(); await page.getByRole('menuitem',{name:'데모 검사',exact:true}).click();

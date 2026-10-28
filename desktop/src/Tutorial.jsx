@@ -31,6 +31,14 @@ export default function Tutorial({ onClose, onDemo, onInspect, canDemo }) {
   const current = steps[step];
   const last = step === steps.length - 1;
   useEffect(() => {
+    if (!content.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const animation = content.current.animate([
+      { opacity:0, transform:'translateY(6px)' },
+      { opacity:1, transform:'translateY(0)' },
+    ], { duration:280, easing:'ease-out' });
+    return () => animation.cancel();
+  }, [step]);
+  useEffect(() => {
     const previous = document.activeElement;
     const element = dialog.current;
     element.showModal();

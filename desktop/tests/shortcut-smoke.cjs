@@ -13,6 +13,8 @@ const path = require('node:path');
     await page.getByRole('button', { name: '단축키', exact: true }).click();
     await page.getByRole('button', { name: '빠른 명령 단축키 변경', exact: true }).click();
     await page.keyboard.press('Control+Shift+p');
+    assert.notEqual((await page.evaluate(() => window.chickadee.state())).preferences.shortcuts?.palette, 'Mod+Shift+KeyP');
+    await page.getByRole('button', {name:'설정 저장', exact:true}).click();
     await page.getByRole('status').filter({ hasText: '단축키를 저장했습니다.' }).waitFor();
     await page.getByRole('button', { name: '사용 가이드 단축키 변경', exact: true }).click();
     await page.keyboard.press('Control+Shift+p');

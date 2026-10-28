@@ -1,5 +1,5 @@
 import UpdateSettings from "./UpdateSettings.jsx";
-import { LANGUAGES, language, t, tc } from "./i18n.mjs";
+import { language, t, tc } from "./i18n.mjs";
 import { advertisingGroup, normalizeCandidates } from "./advertising-groups.mjs";
 import { groupPageRecords, pageReview, expandPageIds, evidenceRole } from "./page-records.mjs";
 import { sortDetections } from "./result-list.mjs";
@@ -18,7 +18,9 @@ import { flushSync } from "react-dom";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
 import ImageOCR from "./ImageOCR.jsx";
 import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
-import RuntimeSettings from "./RuntimeSettings.jsx";
+import GeneralSettings from "./GeneralSettings.jsx";
+import SiteAccessSettings from "./SiteAccessSettings.jsx";
+import ScanFailureDialog from "./ScanFailureDialog.jsx";
 import ShortcutSettings from "./ShortcutSettings.jsx";
 import { defaults as defaultShortcuts, validateShortcuts, fromEvent, keyLabel } from "./shortcuts.mjs";
 import SettingsNav from "./SettingsNav.jsx";
@@ -409,8 +411,9 @@ function AnimatedTabs({ value, children }) {
   return <div className="segmented animated-tabs" ref={ref}>{children}<span className="tab-indicator" aria-hidden="true" /></div>;
 }
 
-function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = "ChevronDown", triggerText, disabled = false }) {
+function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = "ChevronDown", triggerText, disabled = false, deferSelection = false }) {
   const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState({});
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -431,7 +434,7 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
         title={label}
         aria-haspopup="menu"
         aria-expanded={open}
-        onClick={() => setOpen(!open)}
+        onClick={() => { setPending({}); setOpen(!open); }}
       >
         {triggerText && <span>{triggerText}</span>}
         {triggerImage ? <img className="button-image" src={triggerImage} alt="" width={20} height={20} draggable={false} /> : <Icon name={triggerIcon} size={16} />}
@@ -467,7 +470,7 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
             }
           }}
         >
-          {items.map((item) => item.heading ? (
+          {items.map(item => deferSelection && item.group && pending[item.group] ? { ...item, selected: pending[item.group].label === item.label } : item).map((item) => item.heading ? (
             <div className="menu-section-label" role="presentation" key={item.heading}>{item.heading}</div>
           ) : (
             <button
@@ -477,6 +480,10 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
               disabled={item.disabled}
               className={item.danger ? "danger-text" : ""}
               onClick={() => {
+                if (deferSelection && item.group) {
+                  setPending(previous => ({ ...previous, [item.group]: item }));
+                  return;
+                }
                 setOpen(false);
                 ref.current.querySelector(".menu-trigger").focus();
                 item.action();
@@ -492,6 +499,10 @@ function ActionMenu({ label, items, className = "", triggerImage, triggerIcon = 
               {item.shortcut && <kbd>{item.shortcut}</kbd>}
             </button>
           ))}
+          {deferSelection && <div className="filter-menu-actions">
+            <button type="button" role="menuitem" onClick={() => { setPending({}); setOpen(false); ref.current.querySelector('.menu-trigger').focus(); }}>{t("취소")}</button>
+            <button type="button" role="menuitem" className="filter-menu-save" onClick={() => { Object.values(pending).forEach(item => item.action()); setPending({}); setOpen(false); ref.current.querySelector('.menu-trigger').focus(); }}>{t("저장")}</button>
+          </div>}
         </div>
     </div>
   );
@@ -625,6 +636,7 @@ function App() {
     [selectedEvent, setSelectedEvent] = useState(null);
   const [monitorOpen, setMonitorOpen] = useState(false);
   const [scanNotice, setScanNotice] = useState(false);
+  const [failedOutcome, setFailedOutcome] = useState(null);
   const startRequest = useRef(false);
   const lastSelectedRecord = useRef(null);
   useEffect(() => {
@@ -662,7 +674,6 @@ function App() {
   const [pageSearch, setPageSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [reviewSaving, setReviewSaving] = useState(false);
-  const [generalSettingsSaving, setGeneralSettingsSaving] = useState(false);
   const [palette, setPalette] = useState(false);
   const [capabilities, setCapabilities] = useState(null);
   const [visualPreview, setVisualPreview] = useState(false);
@@ -728,7 +739,7 @@ function App() {
   };
   useEffect(() => {
     if (!notice) return;
-    const id = window.setTimeout(() => setNotice(null), 6000);
+    const id = window.setTimeout(() => setNotice(null), notice.type === "success" ? 3000 : 5000);
     return () => window.clearTimeout(id);
   }, [notice]);
   const appendEvent = useCallback((event) => {
@@ -1581,120 +1592,14 @@ function App() {
           {view === "settings" && <div className="settings-page" key={settingsTab}>
             <section className="settings-modal settings-page-content" aria-label={t("설정")}>
               <div className="settings-page-heading">
-                <div><h2>{{ general: t("일반"), ai: t("AI 연결"), notifications: t("알림"), schedules: t("예약 검사"), shortcuts: t("단축키"), updates: t("업데이트") }[settingsTab]}</h2><p>{{ general: t("검사 방식과 결과 저장 위치를 관리합니다."), ai: t("근거 검토에 사용할 AI 제공자와 사용 한도를 설정합니다."), notifications: t("검사 완료 알림과 채널별 리포트를 설정합니다."), schedules: t("정해진 시간에 저장된 구성으로 검사를 실행합니다."), shortcuts: t("자주 쓰는 명령의 키보드 단축키를 설정합니다."), updates: t("최신 릴리스를 확인하고 새 버전을 다운로드합니다.") }[settingsTab]}</p></div>
+                <div><h2>{{ general: t("일반"), auth: t("인증"), ai: t("AI 연결"), notifications: t("알림"), schedules: t("예약 검사"), shortcuts: t("단축키"), updates: t("업데이트") }[settingsTab]}</h2><p>{{ general: t("검사 방식과 결과 저장 위치를 관리합니다."), auth: t("운영하는 사이트의 검사 접근을 관리합니다."), ai: t("근거 검토에 사용할 AI 제공자와 사용 한도를 설정합니다."), notifications: t("검사 완료 알림과 채널별 리포트를 설정합니다."), schedules: t("정해진 시간에 저장된 구성으로 검사를 실행합니다."), shortcuts: t("자주 쓰는 명령의 키보드 단축키를 설정합니다."), updates: t("최신 릴리스를 확인하고 새 버전을 다운로드합니다.") }[settingsTab]}</p></div>
               </div>
-            {settingsTab === "general" && <>
-            <div className="settings-field">
-              <span>{t("언어")}</span>
-              <ActionMenu
-                className="profile-menu language-menu"
-                label={t("언어")}
-                triggerText={LANGUAGES.find((entry) => entry.id === language())?.label}
-                items={LANGUAGES.map(({ id, label }) => ({
-                  label, selected: language() === id,
-                  action: () => action(async () => {
-                    if (id === language()) return;
-                    await api.preferences({ language: id });
-                    await api.reloadLanguage();
-                  }),
-                }))}
-              />
-            </div>
-            <RuntimeSettings disabled={running} />
-            <div className="settings-field">
-              <span>{t("사이트 탐색 설정")}</span>
-              <ActionMenu
-                className="profile-menu"
-                label={t("사이트 탐색 설정")}
-                disabled={running}
-                triggerText={{
-                  default: t("기본 탐색 · 같은 사이트 전체"),
-                  test: t("사용자 모의 게시판 · .post-detail 본문"),
-                  public: t("공공 사이트 기본 설정"),
-                }[profile]}
-                items={[
-                  ["default", t("기본 탐색 · 같은 사이트 전체")],
-                  ["test", t("사용자 모의 게시판 · .post-detail 본문")],
-                  ["public", t("공공 사이트 기본 설정")],
-                ].map(([id, label]) => ({
-                  label, selected: profile === id, disabled: running,
-                  action: () => setProfile(id),
-                }))}
-              />
-            </div>
-            <div className="form-row">
-              <label>
-                {t("최대 페이지")}
-                <input
-                  type="number"
-                  min="1"
-                  max="10000"
-                  value={maxPages}
-                  disabled={running}
-                  onChange={(event) => setMaxPages(event.target.value)}
-                />
-              </label>
-              <label>
-                {t("전체 제한시간 (초)")}
-                <input
-                  type="number"
-                  min="1"
-                  max="1800"
-                  value={timeout}
-                  disabled={running}
-                  onChange={(event) => setTimeoutValue(event.target.value)}
-                />
-              </label>
-            </div>
-            <div className="scan-pace">
-              <div className="scan-pace-heading"><strong>{t("탐색 속도")}</strong><span>{t("{seconds}초 간격", { seconds: scanInterval })}</span></div>
-              <div className="scan-pace-options" role="group" aria-label={t("탐색 속도")}>{[[0, t("빠르게"), t("대기 없이 탐색")], [0.5, t("보통"), t("기본 속도")], [5, t("천천히"), t("다른 작업과 함께")]].map(([value, label, hint]) => <button key={value} type="button" disabled={running} aria-pressed={scanInterval === value} onClick={() => setScanInterval(value)}><strong>{label}</strong><small>{hint}</small></button>)}</div>
-              <label>{t("페이지 사이 대기 시간")}<input aria-label={t("페이지 사이 대기 시간")} type="range" min="0" max="30" step="0.5" value={scanInterval} disabled={running} onChange={event => setScanInterval(Number(event.target.value))} /></label>
-              <p>{t("다음 페이지로 이동하기 전 기다리는 시간입니다. 천천히 검사할 때는 전체 제한시간도 늘려 주세요. 검사 중인 페이지의 처리 속도는 유지됩니다.")}</p>
-            </div>
-            <label className="toggle-label">
-              <div>
-                <strong>{t("실시간 브라우저 화면")}</strong>
-                <small>{t("검사 중인 페이지를 미리보기로 표시합니다.")}</small>
-              </div>
-              <input
-                type="checkbox"
-                checked={livePreview}
-                disabled={running}
-                onChange={(event) => setLivePreview(event.target.checked)}
-              />
-            </label>
-            <label>
-              {t("결과 저장 위치")}
-              <div className="folder-input">
-                <span title={outputRoot}>{outputRoot}</span>
-                <button
-                  type="button"
-                  className="folder-change-icon"
-                  aria-label={t("결과 저장 위치 변경")}
-                  title={t("결과 저장 위치 변경")}
-                  disabled={running}
-                  onClick={() =>
-                    action(async () => setOutputRoot(await api.chooseFolder()))
-                  }
-                >
-                  <Icon name="FolderOpen" size={18} />
-                </button>
-              </div>
-            </label>
-            <p className="settings-folder-hint">{t("각 검사는 별도 폴더에 저장됩니다.")}</p>
-            <div className="general-settings-save">
-              <p>{t("변경 사항은 자동 저장됩니다.")}</p>
-              <Button icon="Save" disabled={running || generalSettingsSaving || !Number.isInteger(Number(maxPages)) || Number(maxPages) < 1 || Number(maxPages) > 10000 || !Number.isFinite(Number(timeout)) || Number(timeout) <= 0 || Number(timeout) > 1800}
-                aria-label={t("일반 설정 저장")} onClick={() => action(async () => {
-                  setGeneralSettingsSaving(true);
-                  try {
-                    await api.preferences({url, maxPages:Number(maxPages), timeout:Number(timeout), profile, livePreview, scanInterval});
-                    tell(t("일반 설정을 저장했습니다."), "success");
-                  } finally { setGeneralSettingsSaving(false); }
-                })}>{generalSettingsSaving ? t("저장 중…") : t("설정 저장")}</Button>
-            </div>
-            </>}
+            {settingsTab === "general" && <GeneralSettings value={{maxPages, timeout, profile, livePreview, scanInterval, outputRoot}} running={running} action={action} tell={tell} Button={Button} ActionMenu={ActionMenu} Icon={Icon} onSave={async next => {
+              await api.preferences({url, ...next});
+              setMaxPages(next.maxPages); setTimeoutValue(next.timeout); setProfile(next.profile); setLivePreview(next.livePreview); setScanInterval(next.scanInterval); setOutputRoot(next.outputRoot);
+              if (next.language !== language()) await api.reloadLanguage();
+            }} />}
+            {settingsTab === "auth" && <SiteAccessSettings disabled={running} />}
             {settingsTab === "ai" && <>
             <GrokSettings config={agentConfig} onConfigured={setAgentConfig} ActionMenu={ActionMenu} />
             <details className="automation-info">
@@ -1986,16 +1891,16 @@ function App() {
                   </div>
                   <ActionMenu
                     className="result-filters-menu"
+                    deferSelection
                     label={t("필터 및 정렬")}
                     triggerIcon="ListFilter"
-                    triggerText={[filter !== "all", reviewFilter !== "all", recordOrder !== "newest"].filter(Boolean).length || undefined}
                     items={[
                       { heading: t("분류") },
-                      ...[["all", t("전체")], ["required", t("필수 탐지")], ["general_ads", t("일반 광고")], ["illegal_suspected", t("불법 의심")], ["image_review", t("이미지 검토")]].map(([id, label]) => ({ label, selected: filter === id, action: () => setFilter(id) })),
+                      ...[["all", t("전체")], ["required", t("필수 탐지")], ["general_ads", t("일반 광고")], ["illegal_suspected", t("불법 의심")], ["image_review", t("이미지 검토")]].map(([id, label]) => ({ label, group: 'type', selected: filter === id, action: () => setFilter(id) })),
                       { heading: t("검토 상태") },
-                      ...[["all", t("검토 전체")], ...Object.entries(REVIEW_LABELS)].map(([id, label]) => ({ label, selected: reviewFilter === id, action: () => setReviewFilter(id) })),
+                      ...[["all", t("검토 전체")], ...Object.entries(REVIEW_LABELS)].map(([id, label]) => ({ label, group: 'review', selected: reviewFilter === id, action: () => setReviewFilter(id) })),
                       { heading: t("정렬 방식") },
-                      ...[["newest", t("최신순")], ["oldest", t("오래된순")]].map(([id, label]) => ({ label, selected: recordOrder === id, action: () => setRecordOrder(id) })),
+                      ...[["newest", t("최신순")], ["oldest", t("오래된순")]].map(([id, label]) => ({ label, group: 'order', selected: recordOrder === id, action: () => setRecordOrder(id) })),
                     ]}
                   />
                   <Button
@@ -2397,6 +2302,10 @@ function App() {
                           !running &&
                           action(async () => {
                             const value = await api.history(item.id);
+                            if (item.status === "failed" || value.report?.status === "failed") {
+                              setFailedOutcome(value);
+                              return;
+                            }
                             applyOutcome(value);
                             setView("results");
                           })
@@ -2433,9 +2342,10 @@ function App() {
         </div>
       </main>
       {scanNotice && <ScanNotice onClose={() => setScanNotice(false)} />}
+      {failedOutcome && <ScanFailureDialog outcome={failedOutcome} onClose={() => setFailedOutcome(null)} />}
       {reviewNotice && <ReviewSavedNotice message={reviewNotice} onClose={() => setReviewNotice(null)} />}
       {notice && (
-        <div className={`toast ${notice.type}`} role={notice.type === "error" ? "alert" : "status"}>
+        <div key={notice.key} className={`toast ${notice.type}`} role={notice.type === "error" ? "alert" : "status"}>
           <Icon
             name={
               notice.type === "error"
@@ -2475,13 +2385,14 @@ function App() {
         <div className="modal-backdrop" onClick={() => setSelectedEvent(null)}>
           <section
             className="modal event-modal"
+            role="dialog" aria-modal="true" aria-label={t("실행 내역")}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="modal-heading">
               <div>
                 <h2>{t("실행 내역")}</h2>
               </div>
-              <button onClick={() => setSelectedEvent(null)}>
+              <button aria-label={t("닫기")} onClick={() => setSelectedEvent(null)}>
                 <Icon name="X" />
               </button>
             </div>

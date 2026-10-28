@@ -29,7 +29,7 @@ export default function ScheduleSettings({ options }) {
       </div>}
       {state.items.map(item => <article className="schedule-item" key={item.id}>
         <div className="schedule-item-header"><div className="schedule-clock"><strong>{item.time}</strong><span>{describe(item)}</span></div><div className="schedule-item-name"><strong>{item.name}</strong><span className={`schedule-state ${item.enabled ? "enabled" : ""}`}>{item.enabled ? t("예약됨") : t("비활성")}</span></div><div className="schedule-actions">
-          <input type="checkbox" aria-label={t("{name} 예약 활성화", { name: item.name })} checked={item.enabled} disabled={busy} onChange={() => action(() => api.saveSchedule({ ...item, enabled: !item.enabled }))} />
+          <input type="checkbox" aria-label={t("{name} 예약 활성화", { name: item.name })} checked={item.enabled} disabled={busy} onChange={() => setDraft({ ...structuredClone(item), enabled: !item.enabled })} />
           <button type="button" aria-label={t("{name} 수정", { name: item.name })} title={t("수정")} disabled={busy} onClick={() => setDraft(structuredClone(item))}><Pencil size={15} /></button>
           <button type="button" aria-label={t("{name} 삭제", { name: item.name })} title={t("삭제")} disabled={busy} onClick={() => action(() => api.removeSchedule(item.id))}><Trash2 size={15} /></button>
         </div></div>

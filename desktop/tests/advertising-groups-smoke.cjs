@@ -26,9 +26,23 @@ const {launch} = require('./native-app.cjs');
     }, rows);
     await page.locator('nav button').filter({hasText: '탐지 내역'}).click();
     const toolbar = page.locator('.list-toolbar');
+    await page.locator('tbody tr').first().waitFor();
+    const beforeFilter = await page.locator('tbody tr').count();
+    const filter = toolbar.getByRole('button', {name:'필터 및 정렬', exact:true});
+    await filter.click();
+    await toolbar.getByRole('menuitemradio', {name:'일반 광고', exact:true}).click();
+    assert.equal(await page.locator('tbody tr').count(), beforeFilter, 'Draft selection must not filter results');
+    await toolbar.getByRole('menuitem', {name:'취소', exact:true}).click();
+    await filter.click();
+    assert.equal(await toolbar.getByRole('menuitemradio', {name:'전체', exact:true}).getAttribute('aria-checked'), 'true');
+    await toolbar.getByRole('menuitemradio', {name:'이미지 검토', exact:true}).click();
+    await page.keyboard.press('Escape');
+    assert.equal(await page.locator('tbody tr').count(), beforeFilter, 'Escape discards draft selection');
+    assert.equal((await filter.innerText()).trim(), '', 'Filter button has no count label');
     async function chooseCategory(label) {
       await toolbar.getByRole('button', {name: '필터 및 정렬', exact: true}).click();
       await toolbar.getByRole('menuitemradio', {name: label, exact:true}).click();
+      await toolbar.locator('.filter-menu-save').click();
     }
     await chooseCategory('일반 광고');
     await page.locator('tbody tr').nth(1).waitFor();

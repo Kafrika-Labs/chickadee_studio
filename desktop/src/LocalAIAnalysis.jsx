@@ -12,14 +12,16 @@ export default function LocalAIAnalysis({ analysis }) {
       if (!item) return null;
       return <React.Fragment key={kind}><dt>{title}</dt><dd>
         <strong data-label={item.status === "completed" ? item.label : "unavailable"}>{item.status === "completed" ? labels[item.label] || t("분석 완료") : kind === "laya" ? t("미적용") : t("분석 미완료")}</strong>
-        {Number.isFinite(item.score) && <span title={item.score_kind === "calibrated_promotion_score" ? t("별도 검증 자료로 보정한 광고 문맥 점수입니다. 위법·안전 확률이 아닙니다.") : t("보정되지 않은 학습 모델의 분류 점수입니다. 확률이나 안전 점수가 아닙니다.")}>{t("모델 점수 {score}", { score: item.score.toFixed(3) })}</span>}
+        {Number.isFinite(item.score) && <span className="model-score" title={item.score_kind === "calibrated_promotion_score" ? t("별도 검증 자료로 보정한 광고 문맥 점수입니다. 위법·안전 확률이 아닙니다.") : t("보정되지 않은 학습 모델의 분류 점수입니다. 확률이나 안전 점수가 아닙니다.")}><span>{t("모델 점수")}</span><b>{item.score.toFixed(3)}</b></span>}
         {kind === "content_visual" && item.status === "completed" && <span>{[["sexual_content", t("성인물")], ["gambling", t("도박")], ["drugs", t("마약")]].filter(([topic]) => Number.isFinite(item.scores?.[topic])).map(([topic, name]) => `${name} ${item.scores[topic].toFixed(3)}`).join(" · ")}</span>}
       </dd></React.Fragment>;
     })}</dl>
     <details><summary>{t("분석 정보")}</summary>
-      {Object.values(analysis).map((item, i) => <p key={i}>{eventText(item.model || item.message)}{item.version ? ` · ${item.version}` : ""}{item.model && item.status !== "completed" && item.message ? ` · ${eventText(item.message)}` : ""}</p>)}
-      {analysis.text?.matched_features?.length > 0 && <p>{t("일치 특징:")} {analysis.text.matched_features.join(" · ")}</p>}
-      <p>{t("로컬 처리 · API 사용 없음")}</p>
+      <div className="analysis-info-body">
+      {Object.values(analysis).map((item, i) => <div className="analysis-model-info" key={i}><p>{eventText(item.model || item.message)}</p>{item.version && <span className="analysis-version">{item.version}</span>}{item.model && item.status !== "completed" && item.message && <p className="analysis-model-note">{eventText(item.message)}</p>}</div>)}
+      {analysis.text?.matched_features?.length > 0 && <div className="analysis-features"><span>{t("일치 특징:")}</span><div>{analysis.text.matched_features.map((feature, index) => <span key={index}>{feature}</span>)}</div></div>}
+      <div className="analysis-local-note">{t("로컬 처리 · API 사용 없음")}</div>
+      </div>
     </details>
   </section>;
 }

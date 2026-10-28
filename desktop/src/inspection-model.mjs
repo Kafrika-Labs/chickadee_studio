@@ -49,6 +49,8 @@ export function withRunMarkers(flow, status = "idle") {
   const roots = flow.nodes.filter((node) => !flow.edges.some((edge) => edge.target === node.id));
   const leaves = flow.nodes.filter((node) => !flow.edges.some((edge) => edge.source === node.id));
   const maxX = Math.max(0, ...flow.nodes.map((node) => node.position.x));
+  const minY = Math.min(0, ...flow.nodes.map((node) => node.position.y));
+  const maxY = Math.max(0, ...flow.nodes.map((node) => node.position.y));
   const centerY = (Math.min(0, ...flow.nodes.map((node) => node.position.y)) + Math.max(0, ...flow.nodes.map((node) => node.position.y))) / 2;
   const captions = { idle: t("검사 대기"), running: t("검사 진행 중"), paused: t("일시정지"), pausing: t("일시정지 요청"), stopping: t("중단 중"), completed: t("검사 완료"), stopped: t("검사 중단"), cancelled: t("검사 중단"), failed: t("검사 실패"), partial: t("일부 결과") };
   const markers = [
@@ -57,7 +59,8 @@ export function withRunMarkers(flow, status = "idle") {
   ];
   const connectors = [
     ...roots.map((node) => ({ source: start, target: node.id })),
-    ...leaves.map((node) => ({ source: node.id, target: end })),
-  ].map((edge, index) => ({ ...edge, id: `${start}:connector:${index}`, type: "default", selectable: false, data: { displayOnly: true }, style: { stroke: "#666c75", strokeWidth: 1.5, strokeDasharray: "4 5" } }));
+    ...leaves.map((node, index) => ({ source: node.id, target: end,
+      ...(node.position.x < maxX ? { type: "outerEnd", data: { routeY: node.position.y <= centerY ? minY - 70 - index * 12 : maxY + 150 + index * 12 } } : {}) })),
+  ].map((edge, index) => ({ ...edge, id: `${start}:connector:${index}`, type: edge.type || "default", selectable: false, data: { ...edge.data, displayOnly: true }, style: { stroke: "#666c75", strokeWidth: 1.5 } }));
   return { ...flow, nodes: [...markers, ...flow.nodes], edges: [...flow.edges, ...connectors] };
 }

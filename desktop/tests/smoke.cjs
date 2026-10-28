@@ -72,6 +72,7 @@ async function waitForHistory(page, count) {
     await page.getByRole("textbox", { name: "명령 검색" }).fill("설정");
     await page.keyboard.press("Enter");
     await page.getByLabel("최대 페이지", { exact: true }).fill("20");
+    await page.getByRole('button', {name:'일반 설정 저장',exact:true}).click();
     await page.getByRole("button", { name: "앱으로 돌아가기", exact: true }).click();
     await page.getByRole("button", { name: "검사 옵션", exact: true }).click();
     await page
@@ -129,9 +130,11 @@ async function waitForHistory(page, count) {
     const dismissedEvidenceCount = firstResult.findings.length - confirmedEvidenceCount;
     await page.getByRole('button', {name:'필터 및 정렬',exact:true}).click();
     await page.getByRole('menuitemradio',{name:'오래된순',exact:true}).click();
+    await page.locator('.filter-menu-save').click();
     assert.notEqual(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
     await page.getByRole('button', {name:'필터 및 정렬',exact:true}).click();
     await page.getByRole('menuitemradio',{name:'최신순',exact:true}).click();
+    await page.locator('.filter-menu-save').click();
     assert.equal(await page.locator('tbody tr input[type="checkbox"]').first().getAttribute('aria-label'),firstNewest);
     await page.locator("tbody tr").first().click();
     const evidenceCard = page.locator('.page-evidence-item').first();
@@ -155,6 +158,7 @@ async function waitForHistory(page, count) {
     await page.getByRole("dialog", { name: "검토 저장 완료" }).getByRole("button", { name: "확인", exact: true }).click();
     await page.getByRole("button", { name: "필터 및 정렬", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "미검토", exact: true }).click();
+    await page.locator('.filter-menu-save').click();
     assert.equal(await page.locator("tbody tr").count(), 1);
     await page.getByRole("checkbox", { name: "표시 항목 전체 선택" }).check();
     await page
@@ -175,6 +179,7 @@ async function waitForHistory(page, count) {
     }
     await page.getByRole("button", { name: "필터 및 정렬", exact: true }).click();
     await page.getByRole("menuitemradio", { name: "검토 전체", exact: true }).click();
+    await page.locator('.filter-menu-save').click();
     await page.getByRole("button", { name: "검사 기록", exact: true }).click();
     await page.locator("tbody tr").first().click();
     await page.locator("tbody tr .review-confirmed").first().waitFor();

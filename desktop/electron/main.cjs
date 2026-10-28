@@ -373,6 +373,7 @@ async function initialize() {
   for (const name of [
     "inspection",
     "agent-configure",
+    "site-access",
     "agent-run",
     "agent-stop",
     "runtime-info",
@@ -382,7 +383,13 @@ async function initialize() {
   ]) {
     handler(name, (value) => backend.request(name, value || {}));
   }
-  handler("preferences", (value) => savePreferences(value));
+  handler("preferences", async (value) => {
+    const folder = value?.outputRoot;
+    if (folder !== undefined && (typeof folder !== 'string' || !path.isAbsolute(folder))) throw new Error('Invalid output folder');
+    const saved = await savePreferences(value, folder);
+    if (folder !== undefined) outputRoot = folder;
+    return saved;
+  });
   handler("reload-language", async () => {
     await preferenceWrites;
     setImmediate(() => window.webContents.reload());
@@ -442,11 +449,12 @@ async function initialize() {
     await fs.writeFile(selected.filePath, data.review_report.html, "utf8");
     return { saved: true };
   });
-  handler("choose-folder", async () => {
+  handler("choose-folder", async (options) => {
     const selected = await dialog.showOpenDialog(window, {
       properties: ["openDirectory", "createDirectory"],
     });
     if (!selected.canceled) {
+      if (options?.draft) return selected.filePaths[0];
       outputRoot = selected.filePaths[0];
       await savePreferences({}, outputRoot);
     }

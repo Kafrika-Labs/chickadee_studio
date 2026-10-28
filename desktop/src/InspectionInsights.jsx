@@ -1,6 +1,6 @@
 // Independent feature surface. Existing app layout/theme stays owned by its designer.
 import React, { useEffect, useMemo, useState, useRef, useId } from "react";
-import { ReactFlow, ReactFlowProvider, Controls, Background, Handle, Position, useReactFlow, useStore } from "@xyflow/react";
+import { ReactFlow, ReactFlowProvider, Controls, Background, Handle, Position, BaseEdge, useReactFlow, useStore } from "@xyflow/react";
 import { explorationFlow, withRunMarkers } from "./inspection-model.mjs";
 import "./inspection.css";
 import EvidenceScreenshot from "./EvidenceScreenshot.jsx";
@@ -9,7 +9,7 @@ import LocalAIAnalysis from "./LocalAIAnalysis.jsx";
 import LocalAIResults from "./LocalAIResults.jsx";
 import ModelStatistics from "./ModelStatistics.jsx";
 import { t } from "./i18n.mjs";
-import { RefreshCw, GitBranch, Sparkles, FileText, Download, Info, X, Cpu, SlidersHorizontal } from "lucide-react";
+import { RefreshCw, GitBranch, Sparkles, FileText, ClipboardCheck, Download, Info, X, Cpu, SlidersHorizontal } from "lucide-react";
 
 import pageIcon from "../assets/browser.png";
 import collectIcon from "../assets/collection.png";
@@ -28,7 +28,7 @@ function ReviewHelp() {
   </span>;
 }
 
-const PAGE_STATUS = { pending: t("방문 대기"), scanned: t("검사 완료"), failed: t("검사 실패"), skipped: t("건너뜀"), visiting: t("방문 중") };
+const PAGE_STATUS = { pending: t("방문 대기"), scanned: t("검사 완료"), failed: t("검사 실패"), error: t("검사 실패"), skipped: t("건너뜀"), visiting: t("방문 중") };
 function ObservedNode({ data, selected }) {
   return <div className={`observed-node${selected ? " is-selected" : ""}`}>
     <div className="observed-node-tile">
@@ -52,6 +52,33 @@ function BoundaryNode({ data }) {
   </div>;
 }
 const nodeTypes = { observed: ObservedNode, boundary: BoundaryNode };
+function OuterEndEdge({ id, sourceX, sourceY, targetX, targetY, data, style }) {
+  const lane = data.routeY;
+  const middle = (sourceX + targetX) / 2;
+  const path = `M ${sourceX} ${sourceY} C ${sourceX + 48} ${sourceY}, ${sourceX + 24} ${lane}, ${middle} ${lane} C ${targetX - 24} ${lane}, ${targetX - 64} ${targetY}, ${targetX} ${targetY}`;
+  return <BaseEdge id={id} path={path} style={style} />;
+}
+const edgeTypes = { outerEnd: OuterEndEdge };
+function NodeDetailModal({ children, onClose, ...props }) {
+  const ref = useRef(null), timer = useRef(null);
+  const [closing, setClosing] = useState(false);
+  useEffect(() => {
+    const previous = document.activeElement;
+    ref.current.showModal();
+    return () => { clearTimeout(timer.current); if (previous?.isConnected) previous.focus(); };
+  }, []);
+  function close() {
+    if (closing) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { onClose(); return; }
+    setClosing(true);
+    timer.current = setTimeout(onClose, 180);
+  }
+  return <dialog {...props} ref={ref} className="inspection-detail node-detail-modal" data-closing={closing} onCancel={event => { event.preventDefault(); close(); }} onClick={event => {
+    if (event.target !== event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) close();
+  }}>{children(close)}</dialog>;
+}
 function InitialGraphFit({ run, hasObservations }) {
   const { getNodes, setViewport, viewportInitialized } = useReactFlow();
   const width = useStore((state) => state.width);
@@ -61,9 +88,11 @@ function InitialGraphFit({ run, hasObservations }) {
     const key = `${run || "idle"}:${hasObservations}`;
     if (!viewportInitialized || !width || !height || fitted.current === key) return;
     const start = getNodes().find((node) => node.data.boundary === "start");
-    if (!start) return;
+    const end = getNodes().find((node) => node.data.boundary === "end");
+    if (!start || !end) return;
     fitted.current = key;
-    setViewport({ x: width / 2 - (start.position.x + 80) * 0.85, y: height / 2 - (start.position.y + 38) * 0.85, zoom: 0.85 });
+    const zoom = Math.min(0.85, (width - 96) / (end.position.x - start.position.x + 160));
+    setViewport({ x: width / 2 - ((start.position.x + end.position.x) / 2 + 80) * zoom, y: height / 2 - ((start.position.y + end.position.y) / 2 + 38) * zoom, zoom });
   }, [viewportInitialized, run, hasObservations, width, height, getNodes, setViewport]);
   return null;
 }
@@ -74,6 +103,11 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
   const [data, setData] = useState(EMPTY), [run, setRun] = useState(null);
   const [selected, setSelected] = useState(null), [packetId, setPacketId] = useState("");
   const [message, setMessage] = useState(""), [working, setWorking] = useState(false);
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(''), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
   const [localOpen, setLocalOpen] = useState(false);
   const tokenLimit = agentConfig?.token_limit || 24000, callLimit = agentConfig?.call_limit || 6;
   async function refresh() {
@@ -135,7 +169,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
       </div>
       <button className="inspection-refresh" aria-label={t("새로고침")} title={t("새로고침")} onClick={() => action(refresh)} disabled={working}><RefreshCw size={16} aria-hidden="true" /></button>
     </div>
-    {message && <div className="inspection-feedback" role="status"><Info size={15} aria-hidden="true" /><span>{message.includes("수집된 근거 ID") ? t("앱을 재실행한 뒤 전체 검토를 시작해 주세요.") : message}</span><button aria-label={t("안내 닫기")} onClick={() => setMessage("")}><X size={14} /></button></div>}
+    {message && <div key={message} className="inspection-feedback" role="status"><Info size={15} aria-hidden="true" /><span>{message.includes("수집된 근거 ID") ? t("앱을 재실행한 뒤 전체 검토를 시작해 주세요.") : message}</span><button aria-label={t("안내 닫기")} onClick={() => setMessage("")}><X size={14} /></button></div>}
     {!run && tab !== "graph" && <div className="inspection-awaiting">
       <img src={noRecordImage} alt="" draggable={false} />
       <div><strong>{t("분석할 검사 결과가 없습니다")}</strong><p>{t("상단에서 검사를 실행하거나, 왼쪽")} <button type="button" className="inspection-history-link" onClick={onOpenHistory}>{t("검사 기록")}</button>{t("에서 이전 결과를 열어 주세요.")}</p></div>
@@ -143,12 +177,13 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
     {tab === "graph" && <>
       <div className="inspection-graph" data-testid="exploration-graph">
         {!run && <div className="graph-awaiting"><Info size={16} aria-hidden="true" /><div><strong>{t("검사 대기 중")}</strong><p>{t("검사를 실행하거나")} <button type="button" className="inspection-history-link" onClick={onOpenHistory}>{t("검사 기록")}</button>{t("을 열면 탐색 경로가 표시됩니다.")}</p></div></div>}
-        <ReactFlowProvider><ReactFlow proOptions={{ hideAttribution: true }} nodeTypes={nodeTypes} nodes={flow.nodes} edges={flow.edges} fitViewOptions={{ padding: 0.2, maxZoom: 0.85 }} minZoom={0.08} maxZoom={1.6} nodesDraggable={false} nodesConnectable={false}
+        <ReactFlowProvider><ReactFlow proOptions={{ hideAttribution: true }} nodeTypes={nodeTypes} edgeTypes={edgeTypes} nodes={flow.nodes} edges={flow.edges} fitViewOptions={{ padding: 0.2, maxZoom: 0.85 }} minZoom={0.08} maxZoom={1.6} nodesDraggable={false} nodesConnectable={false}
           onNodeClick={(_event, node) => {
             if (node.type === "boundary") return;
+            if (selected?.id === node.id) { setSelected(null); setPacketId(""); return; }
             const observed = data.graph.nodes.find((item) => item.id === node.id);
-            setSelected(observed); if (observed?.packet_ids?.[0]) setPacketId(observed.packet_ids[0]);
-          }}><InitialGraphFit run={run} hasObservations={observedFlow.nodes.length > 0} /><Background color="#414246" gap={22} size={1} /><Controls showInteractive={false} /></ReactFlow></ReactFlowProvider>
+            setSelected(observed); setPacketId(observed?.packet_ids?.[0] || "");
+          }} onPaneClick={() => { setSelected(null); setPacketId(""); }}><InitialGraphFit run={run} hasObservations={observedFlow.nodes.length > 0} /><Background color="#414246" gap={22} size={1} /><Controls showInteractive={false} /></ReactFlow></ReactFlowProvider>
       </div>
       {(flow.omitted > 0 || data.graph.truncated) && <footer className="inspection-graph-status" aria-label={t("그래프 표시 현황")}>
         <div className="graph-status-counts">
@@ -158,9 +193,9 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
         </div>
         {data.graph.truncated && <span className="graph-limit-badge"><span aria-hidden="true" />{t("수집 한도 도달")}</span>}
       </footer>}
-      {selected && <div className="inspection-detail"><strong>{selected.label}</strong><p>{selected.url}</p>
-        <p>{selected.kind === "state" ? t("{count}개 영역 관측", { count: selected.packet_ids?.length || 0 }) : selected.status}</p>
-        {packet && <><pre>{packet.text}</pre><LocalAIAnalysis analysis={packet.local_ai} />{!packet.supplemental && <ImageOCR image={data.ocr_images?.find(image => image.id === packet.image_id)} />}<EvidenceScreenshot screenshot={data.screenshots?.[selected.screenshot_id || packet.snapshot_id]} hidden={packet.transparent || packet.offscreen} /></>}</div>}
+      {selected && <NodeDetailModal onClose={() => { setSelected(null); setPacketId(""); }} aria-label={t("선택한 노드 상세")}>{close => <><header className="inspection-detail-heading"><div><strong>{selected.kind === "page" ? t("페이지 정보") : selected.label}</strong><span className="inspection-detail-status" data-status={selected.status}>{selected.kind === "state" ? t("{count}개 영역 관측", { count: selected.packet_ids?.length || 0 }) : PAGE_STATUS[selected.status] || selected.status}</span></div><button type="button" aria-label={t("상세 닫기")} onClick={close}><X size={16} aria-hidden="true" /></button></header>
+        {selected.url && <p className="inspection-detail-url">{selected.url}</p>}
+        {packet && <><pre>{packet.text}</pre><LocalAIAnalysis analysis={packet.local_ai} />{!packet.supplemental && <ImageOCR image={data.ocr_images?.find(image => image.id === packet.image_id)} />}<EvidenceScreenshot screenshot={data.screenshots?.[selected.screenshot_id || packet.snapshot_id]} hidden={packet.transparent || packet.offscreen} /></>}</>}</NodeDetailModal>}
     </>}
     {tab === "agent" && <>
       <div className="review-workspace">
@@ -187,7 +222,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
         </section>
         {report && <div className="review-progress" role="status"><progress max={Math.max(total, 1)} value={completed} /><span>{({running: t("검토 중"), completed: t("전체 검토 완료"), stopped: t("검토 중단"), partial: t("일부 검토 완료")})[report.status]} / {completed}/{total}{report.status !== "completed" && !data.agent?.running ? ` / ${t("미검토 {count}개", { count: total - completed })}` : ""}</span></div>}
         <details className="review-notice"><summary>{t("검토 안내 및 사용량")}</summary><div className="review-usage">{[[t("요청 횟수"), ledger.calls || 0, ledger.call_limit || callLimit, t("회")], [t("토큰 사용량"), ledger.charged_tokens || 0, ledger.token_limit || tokenLimit, t("토큰")]].map(([label, used, limit, unit]) => <div className="review-meter" key={label}><div><span>{label}</span><strong>{used.toLocaleString()}<small> / {limit.toLocaleString()}{unit}</small></strong></div><progress aria-label={label} value={Math.min(used, limit)} max={limit} /><small>{t("{value} 남음", { value: `${Math.max(0, limit - used).toLocaleString()}${unit}` })}</small></div>)}</div><div className="review-usage-footer"><span className="review-usage-caption"><span>{t("현재 검사 기준 · 토큰은 사용 한도에서 차감된 양입니다.")}</span><ReviewHelp /></span><button className="review-text-action" onClick={onOpenSettings}><SlidersHorizontal size={14} aria-hidden="true" />{t("AI 설정")}</button></div></details>
-        {!assessments.length && !data.agent?.running && <div className="review-empty"><FileText size={30} /><strong>{t("전체 검토를 시작하면 리포트가 표시됩니다.")}</strong><span>{t("영역별 검토 의견과 확인이 필요한 근거를 모아 볼 수 있습니다.")}</span></div>}
+        {!assessments.length && !data.agent?.running && <div className="review-empty"><ClipboardCheck size={30} strokeWidth={1.5} aria-hidden="true" /><strong>{t("전체 검토를 시작하면 리포트가 표시됩니다.")}</strong><span>{t("영역별 검토 의견과 확인이 필요한 근거를 모아 볼 수 있습니다.")}</span></div>}
       {data.agent?.events?.length > 0 && <details open={Boolean(data.agent.running)}><summary>{t("조사 과정")}</summary><ol>
         {data.agent.events.slice(-20).map((event, index) => <li key={index}>{({model_request: t("AI 요청"), tool_result: t("근거 조회"), site_explore: t("같은 사이트 추가 탐색"), browser_phase: t("브라우저 확인"), browser_request_blocked: t("요청 차단"), browser_warning: t("수집 알림"), exploration_incomplete: t("추가 확인 미완료")})[event.action] || event.kind}{event.tool && ` / ${event.tool}`}{event.url && ` / ${event.url}`}{event.message && ` / ${event.message}`}{event.reason && ` / ${event.reason}`}</li>)}
       </ol></details>}

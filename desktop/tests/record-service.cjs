@@ -214,6 +214,7 @@ const { launch } = require("./native-app.cjs");
       await nav("탐지 내역");
       await p.getByRole("button", { name: "필터 및 정렬", exact: true }).click();
       await p.getByRole("menuitemradio", { name: "필수 탐지", exact: true }).click();
+      await p.locator('.filter-menu-save').click();
       await p.locator("tbody tr .evidence-cell").first().click();
       await p.screenshot({ path: path.join(out, "22-four-techniques.png") });
       await wait(600);
@@ -222,6 +223,7 @@ const { launch } = require("./native-app.cjs");
     await segment("04-ocr", async () => {
       await p.getByRole("button", { name: "필터 및 정렬", exact: true }).click();
       await p.getByRole("menuitemradio", { name: "전체", exact: true }).click();
+      await p.locator('.filter-menu-save').click();
       const cells = p.locator("tbody tr .evidence-cell");
       let found = false;
       for (let i = 0; i < (await cells.count()); i++) {
@@ -310,6 +312,7 @@ const { launch } = require("./native-app.cjs");
         await nav("탐지 내역");
         await p.getByRole("button", { name: "필터 및 정렬", exact: true }).click();
       await p.getByRole("menuitemradio", { name: "전체", exact: true }).click();
+      await p.locator('.filter-menu-save').click();
         await p.locator("tbody tr .evidence-cell").first().click();
         await wait(700);
       });

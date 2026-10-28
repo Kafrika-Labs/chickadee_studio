@@ -18,6 +18,7 @@
 | Groq 검토와 사용량 | [읽기](inspection-agent.ko.md) |
 | 로컬 도구 계약 | [읽기](agent-extension.ko.md) |
 | 알림 | [읽기](notifications.ko.md) |
+| 검사기 인증·WAF 허용 | [읽기](scanner-authentication.ko.md) |
 | 예약 검사 | [읽기](scheduled-inspections.ko.md) |
 | 업데이트 | [읽기](app-updates.ko.md) |
 | Windows 배포 | [읽기](windows-signing.ko.md) |

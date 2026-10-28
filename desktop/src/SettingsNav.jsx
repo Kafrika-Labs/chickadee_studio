@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Search, X, SlidersHorizontal, Sparkles, Bell, CalendarClock, BookOpen, Keyboard, Download } from 'lucide-react';
+import { ArrowLeft, Search, X, SlidersHorizontal, Sparkles, Bell, CalendarClock, BookOpen, Keyboard, Download, ShieldCheck } from 'lucide-react';
 import { t } from './i18n.mjs';
 const sections = [
   { label: t("기본 설정"), items: [
     { id: 'general', label: t("일반"), Icon: SlidersHorizontal, keywords: t("검사 탐색 프로필 최대 페이지 제한시간 결과 저장 폴더 위치 미리보기 브라우저 속도 천천히 빠르게 간격 대기 환경 CPU 메모리 사양 OCR 자동 표준 절약"), detail: t("검사 방식 · 실행 환경 · 저장 위치") },
+    { id: 'auth', label: t("인증"), Icon: ShieldCheck, keywords: "WAF HTTPS token authentication Authenticator 토큰 인증 허용 사이트", detail: t("사이트 접근 · 인증 토큰") },
     { id: 'notifications', label: t("알림"), Icon: Bell, keywords: t("slack 슬랙 discord 디스코드 웹훅 webhook 리포트 데스크톱 소리 집중 모드"), detail: t("데스크톱 · Slack · Discord") },
     { id: 'updates', label: t("업데이트"), Icon: Download, keywords: t("버전 릴리스 release 다운로드 설치 update"), detail: t("버전 확인 · 다운로드") },
   ] },

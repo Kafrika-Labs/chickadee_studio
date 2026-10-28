@@ -38,21 +38,22 @@ const http = require("node:http");
     await page.locator('.react-flow__node[data-id="target"]').click();
     await page.getByRole("textbox", { name: "검사 대상 URL" }).fill(`http://127.0.0.1:${server.address().port}/`);
     await page.getByRole("button", { name: "검사 분석", exact: true }).click();
-    async function assertStartCentered() {
+    async function assertGraphCentered() {
       await page.waitForFunction(() => {
         const graph = document.querySelector('.inspection-graph');
         const start = document.querySelector('.inspection-graph .boundary-start');
-        if (!graph || !start) return false;
-        const viewport = graph.getBoundingClientRect(), node = start.getBoundingClientRect();
+        const end = document.querySelector('.inspection-graph .boundary-end');
+        if (!graph || !start || !end) return false;
+        const viewport = graph.getBoundingClientRect(), node = start.getBoundingClientRect(), endNode = end.getBoundingClientRect();
         return node.left >= viewport.left && node.right <= viewport.right &&
           node.top >= viewport.top && node.bottom <= viewport.bottom &&
-          Math.abs((node.left + node.right - viewport.left - viewport.right) / 2) < 80;
+          endNode.right <= viewport.right && Math.abs((node.left + endNode.right) / 2 - (viewport.left + viewport.right) / 2) <= 8;
       });
     }
-    await assertStartCentered();
+    await assertGraphCentered();
     await page.getByRole('button', { name: '진행 기록', exact: true }).click();
     await page.getByRole('button', { name: '검사 분석', exact: true }).click();
-    await assertStartCentered();
+    await assertGraphCentered();
     async function wait(count) {
       const deadline = Date.now() + 180000;
       let state;
@@ -176,6 +177,7 @@ const http = require("node:http");
     await page.screenshot({ path: path.join(root, 'artifacts/notification-settings.png') });
     await page.getByRole('button', { name: '일반', exact: true }).click();
     await page.getByRole('button', { name: '천천히 다른 작업과 함께', exact: true }).click();
+    await page.getByRole('button', {name:'일반 설정 저장',exact:true}).click();
     await page.waitForFunction(async () => (await window.chickadee.state()).preferences.scanInterval === 5);
     assert.equal(await page.getByLabel('페이지 사이 대기 시간', { exact: true }).inputValue(), '5');
     await page.screenshot({ path: path.join(root, 'artifacts/scan-pace-settings.png') });
@@ -194,6 +196,7 @@ const http = require("node:http");
     assert.equal((await page.evaluate(() => window.chickadee.scheduleState())).items[0].time, '09:00');
     assert.equal((await page.evaluate(() => window.chickadee.scheduleState())).items[0].options.interval_sec, 5);
     await page.getByLabel('매일 아침 점검 예약 활성화', { exact: true }).click();
+    await page.getByRole('button', { name: '예약 저장', exact: true }).click();
     await page.waitForFunction(async () => !(await window.chickadee.scheduleState()).items[0].enabled);
     await page.screenshot({ path: path.join(root, 'artifacts/schedule-settings.png') });
     await page.getByRole('button', { name: '매일 아침 점검 수정', exact: true }).click();

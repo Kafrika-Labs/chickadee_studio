@@ -28,6 +28,7 @@ from .async_runtime import event_loop_runner
 from .reporting import review_report
 from .image_ocr import OCRSession
 from .content_analysis import inputs as content_inputs, analyze_content
+from .site_access import SiteAccess, site_origin
 
 
 class DesktopBridge:
@@ -53,6 +54,7 @@ class DesktopBridge:
         self.history_path = self.data_dir/'history.json'
         self.live_graph = {'nodes': {}, 'edges': {}}
         self.agent_config = None
+        self.site_access = {}
         self.agent_worker = None
         self.agent_stop = Event()
         self.agent_data = {'ledger': {}, 'assessments': [], 'events': []}
@@ -93,6 +95,18 @@ class DesktopBridge:
     def command(self, method, params):
         if not isinstance(params, dict):
             raise ValueError('명령 인자가 올바르지 않습니다.')
+        if method == 'site-access':
+            if params:
+                if self.running:
+                    raise ValueError('Stop the scan before changing site access.')
+                if set(params) == {'remove'}:
+                    self.site_access.pop(site_origin(params['remove']), None)
+                else:
+                    entry = SiteAccess.create(params)
+                    if len(self.site_access) >= 20 and entry.origin not in self.site_access:
+                        raise ValueError('A maximum of 20 sites can be registered per session.')
+                    self.site_access[entry.origin] = entry
+            return {'sites': [entry.public() for entry in self.site_access.values()]}
         if method == 'login-session':
             return self.control.login.session(params.get('request_id'))
         if method == 'login-complete':
@@ -202,7 +216,14 @@ class DesktopBridge:
             root = Path(__file__).resolve().parent.parent
             profile_path = root/'profiles'/('inuri-test.json' if profile == 'test' else 'public-site.json') if profile != 'default' else None
             self.run_environment = environment(self.runtime_mode)
+            try:
+                site_access = self.site_access.get(site_origin(params.get('url', '')))
+            except ValueError:
+                site_access = None
+            if site_access and not site_access.headers(params.get('url', '')):
+                raise ValueError('Site access has expired or the entry URL is outside its registered path. Update or remove the registration.')
             config = ScanConfig(params.get('url', ''), interactive_login=True, max_pages=params.get('max_pages', 100),
+                                site_access=site_access,
                                 timeout_sec=params.get('timeout_sec', 300), settle_ms=params.get('settle_ms', 350),
                                 page_timeout_sec=params.get('page_timeout_sec', 45),
                                 interval_sec=params.get('interval_sec', .5), allow_network=True,

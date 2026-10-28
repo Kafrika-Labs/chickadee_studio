@@ -71,13 +71,13 @@ export default function GrokSettings({ config, onConfigured, ActionMenu }) {
       <p>{t("키는 파일에 저장하지 않습니다. 입력 후 아래 설정 적용을 눌러주세요.")}</p>
     </div>}
     <button type="button" className="grok-advanced-toggle" onClick={() => setAdvanced(!advanced)} aria-expanded={advanced} aria-controls="grok-advanced"><ChevronDown size={14} aria-hidden="true" />{t("모델 및 사용 한도")}</button>
-    {advanced && <div id="grok-advanced">
+    <div id="grok-advanced" className="grok-advanced-content" data-open={advanced} inert={!advanced}><div>
     <label>{t("모델")}<input aria-label={t("모델")} value={draft.model} onChange={(event) => update("model", event.target.value)} disabled={busy} /></label>
     <div className="form-row">
       <label>{t("누적 토큰 한도")}<input aria-label={t("누적 토큰 한도")} type="number" min="1000" max="60000" value={draft.token_limit} onChange={(event) => update("token_limit", Number(event.target.value))} disabled={busy} /></label>
       <label>{t("누적 호출 한도")}<input aria-label={t("누적 호출 한도")} type="number" min="1" max="12" value={draft.call_limit} onChange={(event) => update("call_limit", Number(event.target.value))} disabled={busy} /></label>
     </div>
-    </div>}
+    </div></div>
     <div className="grok-settings-actions"><p role="status">{message}</p><button type="button" onClick={apply} disabled={busy}>{busy ? t("적용 중…") : t("설정 적용")}</button></div>
   </section>;
 }

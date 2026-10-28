@@ -6,6 +6,7 @@ const names = { auto: t("자동"), standard: t("표준"), economy: t("절약") }
 const gb = value => Number.isFinite(value) ? `${(value / 1024**3).toFixed(1)} GB` : t("확인 불가");
 export default function RuntimeSettings({ disabled }) {
   const [data, setData] = useState(null), [busy, setBusy] = useState(false), [message, setMessage] = useState("");
+  const [draftMode, setDraftMode] = useState(null);
   async function refresh() { setData(await window.chickadee.environment()); }
   useEffect(() => { refresh().catch(error => setMessage(error.message)); }, []);
   useEffect(() => {
@@ -29,8 +30,9 @@ export default function RuntimeSettings({ disabled }) {
       <dl className="runtime-hardware"><dt>CPU</dt><dd>{t("논리 프로세서 {count}개", { count: hardware.logical_cpus })}</dd><dt>{t("메모리")}</dt><dd>{t("{total} · 사용 가능 {available}", { total: gb(hardware.total_bytes), available: gb(hardware.available_bytes) })}</dd></dl>
       <div className="runtime-mode-heading">{t("실행 모드")}</div>
       <div className="runtime-mode" role="group" aria-label={t("실행 모드")}>{Object.entries(names).map(([mode, name]) =>
-        <button key={mode} type="button" aria-pressed={data.mode === mode} disabled={disabled || busy || checking}
-          onClick={() => action(() => window.chickadee.configureRuntime({ mode }))}>{name}</button>)}</div>
+        <button key={mode} type="button" aria-pressed={(draftMode || data.mode) === mode} disabled={disabled || busy || checking}
+          onClick={() => setDraftMode(mode)}>{name}</button>)}</div>
+      <div className="runtime-actions"><button type="button" disabled={disabled || busy || checking || !draftMode || draftMode === data.mode} onClick={() => action(async () => { await window.chickadee.configureRuntime({ mode: draftMode }); setDraftMode(null); })}>{t("설정 저장")}</button></div>
       <p className="runtime-mode-description">{data.effective_mode === "economy" ? t("이미지 OCR을 생략하고 문자·화면 AI를 사용합니다.") : t("이미지 OCR 처리 한도: {count}장. 사용 가능한 기능은 아래에서 확인하세요.", { count: data.ocr_max_images })}</p>
       <dl className="runtime-features"><dt>{t("필수 탐지 4종")}</dt><dd>{t("사용")}</dd>
         <dt>{t("문자 AI")}</dt><dd>{features.text_ai ? t("사용 가능") : t("모델 확인 필요")}</dd>

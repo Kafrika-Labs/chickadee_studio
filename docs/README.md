@@ -18,6 +18,7 @@ The interface and screenshots are in Korean. English guides retain key control l
 | Groq review and usage | [Read](inspection-agent.md) |
 | Local tool contract | [Read](agent-extension.md) |
 | Notifications | [Read](notifications.md) |
+| Scanner authentication and WAF exceptions | [Read](scanner-authentication.md) |
 | Scheduled scans | [Read](scheduled-inspections.md) |
 | Updates | [Read](app-updates.md) |
 | Windows distribution | [Read](windows-signing.md) |

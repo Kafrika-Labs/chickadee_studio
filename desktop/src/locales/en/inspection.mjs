@@ -1,4 +1,8 @@
 export default {
+  "모델 점수": "Model score",
+  "선택한 노드 상세": "Selected node details",
+  "페이지 정보": "Page information",
+  "상세 닫기": "Close details",
   // InspectionInsights.jsx
   "전체 검토 안내": "About full review",
   "수집 영역을 순서대로 검토": "Reviews collected regions in order",

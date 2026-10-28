@@ -28,6 +28,7 @@ from .content_visual import enrich_content_images, model_contract as photo_model
 from .laya_review import enrich_laya, MAX_REVIEW_SECONDS
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
+from .site_access import SiteAccess, HEADER as SITE_ACCESS_HEADER
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots, SCREENSHOT_MAX_COUNT, SCREENSHOT_MAX_BYTES, OCR_MAX_OBSERVATIONS
 
 # Keep the frozen browser close to the engine to fit Windows ZIP path limits.
@@ -151,6 +152,7 @@ class ScanConfig:
     ocr_max_images: int = 1000
     runtime_mode: str = 'standard'
     interactive_login: bool = False
+    site_access: SiteAccess | None = field(default=None, repr=False)
 
     def __post_init__(self):
         normalize_url(self.entry_url)
@@ -273,6 +275,7 @@ class _State:
     pending_redirects: dict = field(default_factory=dict)
     ocr: OCRSession = field(default_factory=OCRSession)
     image_context: object = None
+    site_access: SiteAccess | None = field(default=None, repr=False)
     image_cache: dict = field(default_factory=dict)
     image_resource_keys: set = field(default_factory=set)
     image_requests: int = 0
@@ -495,6 +498,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                                 accept_downloads=False, service_workers="block")
             allowed = {origin(config.entry_url), *(origin(url) for url in profile.allowed_resource_origins)}
             state.image_context = context
+            state.site_access = config.site_access
             state.image_origins = allowed
             state.image_allow_network = config.allow_network
             login_targets = {}
@@ -819,10 +823,18 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
 async def _fetch_route(route, config, state, emit, url):
     for attempt in range(min(1, config.retries) + 1):
         try:
-            return await route.fetch(max_redirects=0, timeout=int(config.page_timeout_sec * 1000))
+            options = {}
+            if config.site_access:
+                headers = {k: v for k, v in (await route.request.all_headers()).items()
+                           if k.lower() != SITE_ACCESS_HEADER.lower()}
+                headers.update(config.site_access.headers(url, route.request.method))
+                options['headers'] = headers
+            return await route.fetch(max_redirects=0, timeout=int(config.page_timeout_sec * 1000), **options)
         except Exception as error:
             if attempt or not config.retries or not any(token in str(error) for token in
                     ('EFAULT', 'ENOBUFS', 'ECONNRESET', 'ERR_CONNECTION_RESET')):
+                if config.site_access:
+                    raise RuntimeError(config.site_access.redact(error)) from None
                 raise
             state.retry_count += 1
             emit({'kind': 'status', 'url': url, 'message': '일시 연결 오류 · 같은 읽기 요청을 한 번 재시도합니다.'})
@@ -1118,7 +1130,8 @@ async def _fetch_image_bounded(url, state):
         try:
             cookies = await state.image_context.cookies([url]) if state.image_context else []
             cookie_header = '; '.join(c['name'] + '=' + c['value'] for c in cookies)
-            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, MAX_IMAGE_BYTES - state.image_bytes), cookie_header)
+            extra = {'access_headers': state.site_access.headers(url)} if state.site_access else {}
+            data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, MAX_IMAGE_BYTES - state.image_bytes), cookie_header, **extra)
         except HTTPError as error:
             if error.code == 429:
                 parts = urlsplit(url)

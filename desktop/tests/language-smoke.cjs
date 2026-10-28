@@ -25,6 +25,8 @@ const { launch } = require('./native-app.cjs');
       assert.ok(width >= 110 && width <= 140);
       await trigger.click();
       await page.locator('.language-menu').getByRole('menuitemradio', { name: label, exact: true }).click();
+      assert.notEqual(await page.locator('html').getAttribute('lang'), lang, 'Language remains unchanged before Save');
+      await page.locator('.general-settings-save button').click();
       await page.waitForFunction(value => document.documentElement.lang === value, lang);
     }
     await settings('설정');

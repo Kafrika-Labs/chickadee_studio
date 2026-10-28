@@ -39,7 +39,7 @@ const { launch } = require('./source-ui-harness.cjs');
    }
   }
   await page.setViewportSize({width:1280,height:800});
-  await guide.getByRole('button',{name:'2단계: 구성·OCR',exact:true}).click();
+  await guide.getByRole('button',{name:'3단계: 구성·OCR',exact:true}).click();
   await guide.getByRole('button',{name:'화면 크게 보기',exact:true}).click();
   await page.getByRole('dialog',{name:'가이드 화면 확대',exact:true}).waitFor();
   await page.keyboard.press('Escape');
