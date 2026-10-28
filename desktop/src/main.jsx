@@ -1594,7 +1594,7 @@ function App() {
               <div className="settings-page-heading">
                 <div><h2>{{ general: t("일반"), auth: t("인증"), ai: t("AI 연결"), notifications: t("알림"), schedules: t("예약 검사"), shortcuts: t("단축키"), updates: t("업데이트") }[settingsTab]}</h2><p>{{ general: t("검사 방식과 결과 저장 위치를 관리합니다."), auth: t("운영하는 사이트의 검사 접근을 관리합니다."), ai: t("근거 검토에 사용할 AI 제공자와 사용 한도를 설정합니다."), notifications: t("검사 완료 알림과 채널별 리포트를 설정합니다."), schedules: t("정해진 시간에 저장된 구성으로 검사를 실행합니다."), shortcuts: t("자주 쓰는 명령의 키보드 단축키를 설정합니다."), updates: t("최신 릴리스를 확인하고 새 버전을 다운로드합니다.") }[settingsTab]}</p></div>
               </div>
-            {settingsTab === "general" && <GeneralSettings value={{maxPages, timeout, profile, livePreview, scanInterval, outputRoot}} running={running} action={action} tell={tell} Button={Button} ActionMenu={ActionMenu} Icon={Icon} onSave={async next => {
+            {settingsTab === "general" && booted && <GeneralSettings value={{maxPages, timeout, profile, livePreview, scanInterval, outputRoot}} running={running} action={action} tell={tell} Button={Button} ActionMenu={ActionMenu} Icon={Icon} onSave={async next => {
               await api.preferences({url, ...next});
               setMaxPages(next.maxPages); setTimeoutValue(next.timeout); setProfile(next.profile); setLivePreview(next.livePreview); setScanInterval(next.scanInterval); setOutputRoot(next.outputRoot);
               if (next.language !== language()) await api.reloadLanguage();
