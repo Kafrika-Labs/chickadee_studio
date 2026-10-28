@@ -1992,6 +1992,7 @@ function App() {
                     <thead>
                       <tr>
                         <th className="selection-cell">
+                          <label className="selection-hitbox">
                           <input
                             type="checkbox"
                             aria-label={t("표시 항목 전체 선택")}
@@ -2016,6 +2017,7 @@ function App() {
                               )
                             }
                           />
+                          </label>
                         </th>
                         <th>{t("유형")}</th>
                         <th>{t("탐지 원문")}</th>
@@ -2036,6 +2038,7 @@ function App() {
                             className="selection-cell"
                             onClick={(event) => event.stopPropagation()}
                           >
+                            <label className="selection-hitbox">
                             <input
                               type="checkbox"
                               aria-label={t("{id} 선택", { id: record.id })}
@@ -2051,6 +2054,7 @@ function App() {
                                 })
                               }
                             />
+                            </label>
                           </td>
                           <td className="record-type-cell">
                             <div className="record-types">

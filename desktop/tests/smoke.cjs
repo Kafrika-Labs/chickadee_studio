@@ -160,6 +160,11 @@ async function waitForHistory(page, count) {
     await page.getByRole("menuitemradio", { name: "미검토", exact: true }).click();
     await page.locator('.filter-menu-save').click();
     assert.equal(await page.locator("tbody tr").count(), 1);
+    const firstSelection = page.locator('tbody .selection-hitbox').first();
+    await firstSelection.click({position:{x:3,y:3}});
+    assert.equal(await firstSelection.locator('input').isChecked(), true, 'Checkbox padding selects the row');
+    await firstSelection.click({position:{x:3,y:3}});
+    assert.equal(await firstSelection.locator('input').isChecked(), false, 'Checkbox padding also clears selection');
     await page.getByRole("checkbox", { name: "표시 항목 전체 선택" }).check();
     await page
       .locator(".bulk-toolbar")
