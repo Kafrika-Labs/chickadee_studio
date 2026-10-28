@@ -336,12 +336,13 @@ function Button({
   children,
   className = "",
   variant = "secondary",
+  iconOnly = false,
   ...props
 }) {
   return (
-    <button className={`button button-${variant} ${className}`} {...props}>
+    <button className={`button button-${variant} ${iconOnly ? "button-icon-only" : ""} ${className}`} aria-label={iconOnly ? children : undefined} title={iconOnly ? children : undefined} {...props}>
       {image ? <img className="button-image" src={image} alt="" width={20} height={20} draggable={false} /> : icon && <Icon name={icon} size={16} />}
-      <span>{children}</span>
+      {!iconOnly && <span>{children}</span>}
     </button>
   );
 }
@@ -612,6 +613,24 @@ function transitionPage(update) {
 }
 
 function App() {
+  useEffect(() => {
+    const logo = new Image();
+    let active = true;
+    logo.onload = () => {
+      if (!active) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const context = canvas.getContext('2d');
+      if (!context) return;
+      context.imageSmoothingQuality = 'high';
+      const scale = Math.min(32 / logo.naturalWidth, 32 / logo.naturalHeight);
+      const width = logo.naturalWidth * scale, height = logo.naturalHeight * scale;
+      context.drawImage(logo, (32 - width) / 2, (32 - height) / 2, width, height);
+      document.documentElement.style.setProperty('--app-cursor', `url("${canvas.toDataURL('image/png')}") 4 4, auto`);
+    };
+    logo.src = brandMark;
+    return () => { active = false; document.documentElement.style.removeProperty('--app-cursor'); };
+  }, []);
   const [flow, setFlow] = useState(defaultWorkflow),
     [url, setUrl] = useState("http://113.198.66.73:18244/"),
     [view, setCurrentView] = useState("workflow");
@@ -1905,6 +1924,7 @@ function App() {
                   />
                   <Button
                     icon="RotateCcw"
+                    iconOnly
                     disabled={filter === "all" && reviewFilter === "all" && recordOrder === "newest"}
                     onClick={() => { setFilter("all"); setReviewFilter("all"); setRecordOrder("newest"); }}
                   >
@@ -1912,6 +1932,7 @@ function App() {
                   </Button>
                   <Button
                     icon="Download"
+                    iconOnly
                     disabled={!outcome || running}
                     onClick={() =>
                       action(async () => {
@@ -2279,7 +2300,7 @@ function App() {
             <section className="table-section">
               <div className="list-toolbar">
                 <strong>{t("최근 검사")}</strong>
-                <Button icon="FolderOpen" disabled={running} onClick={load}>
+                <Button icon="FolderOpen" iconOnly disabled={running} onClick={load}>
                   {t("결과 불러오기")}
                 </Button>
               </div>

@@ -1721,6 +1721,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .content-area { animation: none; }
+html, body, body *, body *::before, body *::after { cursor:var(--app-cursor, auto) !important; }
+.list-toolbar .button.button-icon-only { display:inline-flex; align-items:center; justify-content:center; width:32px; min-width:32px; height:32px; min-height:32px; padding:0; border:0; border-radius:5px; background:transparent; }
+.list-toolbar .button.button-icon-only:hover:not(:disabled) { background:#e9edf2; }
+.content-area[data-view="history"] tbody tr,
+.content-area[data-view="history"] tbody tr * { cursor:pointer; }
 .app-shell { view-transition-name: workspace; }
 ::view-transition { pointer-events:none; }
 ::view-transition-old(root), ::view-transition-new(root) { animation:none; }
