@@ -29,6 +29,7 @@ from .laya_review import enrich_laya, MAX_REVIEW_SECONDS
 from .exports import CSV_COLUMNS, csv_bytes, atomic_write, extra_result
 from .profiles import SiteProfile
 from .site_access import SiteAccess, HEADER as SITE_ACCESS_HEADER
+from .network_boundary import AddressPolicy, NetworkProxy
 from .inspection import InspectionTrace, validate_inspection, validate_screenshots, SCREENSHOT_MAX_COUNT, SCREENSHOT_MAX_BYTES, OCR_MAX_OBSERVATIONS
 
 # Keep the frozen browser close to the engine to fit Windows ZIP path limits.
@@ -153,9 +154,11 @@ class ScanConfig:
     runtime_mode: str = 'standard'
     interactive_login: bool = False
     site_access: SiteAccess | None = field(default=None, repr=False)
+    private_addresses: tuple[str, ...] = ()
 
     def __post_init__(self):
         normalize_url(self.entry_url)
+        AddressPolicy(self.entry_url, self.private_addresses)
         if type(self.ocr_enabled) is not bool or type(self.ocr_max_images) is not int or not 1 <= self.ocr_max_images <= 1000:
             raise ValueError('OCR 실행·이미지 한도 설정 오류')
         if self.runtime_mode not in ('standard', 'economy'): raise ValueError('실행 환경 모드 오류')
@@ -299,6 +302,7 @@ class _State:
 
     image_origins: set = field(default_factory=set)
     image_allow_network: bool = False
+    address_policy: object = None
 
 
 async def scan(config: ScanConfig, stop: Event | None = None, emit=None, control=None) -> ScanOutcome:
@@ -440,12 +444,14 @@ def _cross_source_match(records, incoming, details=None):
 
 
 def _ocr_summary(state, config):
+    from .diagnostics import image_reasons
     unreadable = sum(i.get('recognition_status') == 'unreadable' for i in state.ocr_images)
     failed = sum(i['status'] == 'failed' for i in state.ocr_images)
     return {'engine': 'PaddleOCR', 'images': len(state.ocr_images), 'unique_images': len(state.ocr_cache),
             'enabled': config.ocr_enabled, 'max_images': config.ocr_max_images, 'runtime_mode': config.runtime_mode,
             'completed': sum(i['status'] == 'completed' and i.get('recognition_status')!='skipped' for i in state.ocr_images),
             'failed': failed, 'unreadable': unreadable, 'skipped': state.ocr_skipped, 'reused': state.ocr_reused,
+            'reasons': image_reasons(state.ocr_images),
             'status': 'disabled' if not config.ocr_enabled else 'partial' if failed or unreadable or state.ocr_skipped
                       else 'completed' if state.ocr_images else 'no_images'}
 
@@ -488,9 +494,15 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
         await pw.stop()
         raise
     browser = None
+    proxy = None
     try:
+        policy = AddressPolicy(config.entry_url, config.private_addresses or profile.private_addresses)
+        proxy = await NetworkProxy(policy).start()
+        state.address_policy = policy
         try:
-            browser = await pw.chromium.launch(headless=True, chromium_sandbox=True)
+            browser = await pw.chromium.launch(headless=True, chromium_sandbox=True,
+                proxy={'server': proxy.url, 'bypass': '<-loopback>'},
+                args=['--disable-quic', '--force-webrtc-ip-handling-policy=disable_non_proxied_udp'])
         except Exception as exc:
             raise RuntimeError("Chromium을 시작하지 못했습니다. 소스 실행 시 python -m playwright install chromium을 PLAYWRIGHT_BROWSERS_PATH=0 설정 후 실행하세요. " + str(exc)) from exc
         try:
@@ -671,7 +683,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                 page.on("dialog", dismiss_dialog)
                 page.on("popup", lambda popup: popup.close())
                 try:
-                    identity = {}
+                    identity = {'private_addresses': list(config.private_addresses or profile.private_addresses)}
                     icon_url = urljoin(url, '/favicon.ico')
                     async def check_login(response=None):
                         nonlocal icon_url
@@ -759,7 +771,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
                                     raise AuthenticationRequired('로그인 상태를 확인하지 못했습니다. 반복 요청을 중단하고 미수집으로 기록합니다.') from None
                                 try:
                                     if config.allow_network or is_loopback(icon_url):
-                                        identity['favicon'] = await asyncio.to_thread(fetch_favicon, icon_url)
+                                        identity['favicon'] = await asyncio.to_thread(fetch_favicon, icon_url, policy)
                                 except Exception:
                                     pass
                                 decision = await control.login.wait(error.url, url, await context.cookies(), emit, identity)
@@ -817,6 +829,7 @@ async def _crawl(config: ScanConfig, state: _State, emit, rules: Rules, profile:
         finally:
             await browser.close()
     finally:
+        if proxy: await proxy.close()
         await pw.stop()
 
 
@@ -1131,6 +1144,8 @@ async def _fetch_image_bounded(url, state):
             cookies = await state.image_context.cookies([url]) if state.image_context else []
             cookie_header = '; '.join(c['name'] + '=' + c['value'] for c in cookies)
             extra = {'access_headers': state.site_access.headers(url)} if state.site_access else {}
+            if state.address_policy:
+                extra['address_policy'] = state.address_policy
             data, mime = await asyncio.to_thread(fetch_image, url, min(2_000_000, MAX_IMAGE_BYTES - state.image_bytes), cookie_header, **extra)
         except HTTPError as error:
             if error.code == 429:
@@ -1184,8 +1199,10 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
         record['source_role'] = image.get('source_role')
         record['interface_image'] = image.get('interface_image', False)
         state.ocr_images.append(record)
+        stage = 'fetch'
         try:
             data, mime = inline_image(source) if source.startswith('data:') else await _fetch_image_bounded(source, state)
+            stage = 'decode'
             metadata = image_metadata(data)
             digest = metadata['image_sha256']
             if not source.startswith('data:'):
@@ -1220,6 +1237,7 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
                 continue
             emit({'kind': 'phase', 'stage': 'ocr', 'action': 'image_ocr', 'url': page_url,
                   'message': 'PaddleOCR로 이미지 속 글자를 읽습니다.', 'location': location})
+            stage = 'recognize'
             if digest not in state.ocr_cache:
                 state.ocr_cache[digest] = await state.ocr.recognize(data)
             result = state.ocr_cache[digest]
@@ -1241,6 +1259,7 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
             text = observation['text']
             record['recognition_status'] = 'readable' if text else 'unreadable'
             if not text:
+                record['reason_code'] = 'low_confidence' if result.get('lines') else 'no_text'
                 message = unreadable_message(result)
                 record['message'] = message
                 state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + message})
@@ -1262,7 +1281,9 @@ async def _inspect_images(frame, images, prefix, page_url, state, emit, rules):
                 state.errors.append({'url': page_url, 'message': str(error)})
                 emit({'kind': 'warning', 'stage': 'ocr', 'url': page_url, 'message': str(error) + ': 나머지 이미지는 생략으로 기록합니다.'})
         except Exception as error:
-            record.update(status='failed', message=str(error)[:300])
+            from .diagnostics import image_failure
+            record.update(status='failed', message=str(error)[:300], failure_stage=stage,
+                          reason_code=image_failure(error, stage))
             state.errors.append({'url': page_url, 'message': '이미지 OCR: ' + str(error)[:160]})
             emit({'kind': 'image_ocr', 'image_id': record['id'], 'status': 'failed', 'message': str(error)[:160]})
             emit({'kind': 'warning', 'stage': 'ocr', 'url': page_url, 'message': '이미지 OCR 처리 실패: ' + str(error)[:160]})

@@ -17,6 +17,7 @@ export default function ModelStatistics({ data }) {
       <tr><th>Laya</th><td>{stats.laya.status}</td><td>{t("{count}개 영역", { count: stats.laya.analyzed.toLocaleString() })}</td><td>{stats.laya.samples ? <Bars values={stats.laya.bins} labels={bands} /> : t("적용된 분석 결과 없음")}</td></tr>
       <tr><th>OCR</th><td>{stats.ocr.status}</td><td>{t("{done} / {total}개 이미지 영역", { done: stats.ocr.analyzed.toLocaleString(), total: stats.ocr.total.toLocaleString() })}</td><td>{stats.ocr.total ? <Bars values={stats.ocr.values} labels={[t("문자 인식"), t("읽기 어려움"), t("오류"), t("생략")]} /> : t("이미지 없음")}</td></tr>
     </tbody></table></div>
+    {stats.ocr.reasons.length > 0 && <p aria-label="이미지 처리 사유">{stats.ocr.reasons.map(reason => `${t(reason.label)} ${reason.count}`).join(' / ')}</p>}
     <p>{t("ML과 Laya의 점수는 모델의 분류 점수입니다. 정확도나 위법 확률이 아닙니다. OCR은 이미지에서 글자를 읽은 결과입니다.")}</p>
   </section>;
 }

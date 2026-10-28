@@ -21,8 +21,9 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, *_args, **_kwargs): return None
 
 
-def fetch_image(url, limit=2_000_000, cookie_header="", access_headers=None):
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+def fetch_image(url, limit=2_000_000, cookie_header="", access_headers=None, address_policy=None):
+    from .network_boundary import AddressPolicy
+    opener = (address_policy or AddressPolicy(url)).opener()
     headers = {'User-Agent': 'Chickadee-Image-Collector'}
     if cookie_header: headers['Cookie'] = cookie_header
     if access_headers: headers.update(access_headers)

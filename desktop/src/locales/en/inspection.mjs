@@ -1,4 +1,6 @@
 export default {
+  "원본 리포트": "Original report",
+  "공유용 리포트": "Sharing copy",
   "모델 점수": "Model score",
   "선택한 노드 상세": "Selected node details",
   "페이지 정보": "Page information",

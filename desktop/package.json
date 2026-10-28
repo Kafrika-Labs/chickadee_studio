@@ -7,6 +7,7 @@
   "private": true,
   "main": "electron/main.cjs",
   "scripts": {
+    "dev": "node tools/dev.cjs",
     "build": "vite build",
     "start": "node electron/launch.cjs",
     "package": "npm run build && electron-builder --win --x64 --dir --publish never",

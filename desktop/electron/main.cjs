@@ -374,6 +374,7 @@ async function initialize() {
     "inspection",
     "agent-configure",
     "site-access",
+    "access-preflight",
     "agent-run",
     "agent-stop",
     "runtime-info",
@@ -435,18 +436,20 @@ async function initialize() {
     if (selected.canceled) return null;
     return backend.request("export", { path: selected.filePath });
   });
-  handler("export-report", async () => {
+  handler("export-report", async (options) => {
     const state = await backend.request("state");
     if (state.running || !state.run_id)
       throw new Error(t("검사 완료 후 리포트를 저장하세요."));
-    const data = await backend.request("inspection", { run_id: state.run_id });
-    if (!data.review_report?.html) throw new Error(t("저장할 리포트가 없습니다."));
+    const shared = options?.shared === true;
+    const data = await backend.request(shared ? "shared-report" : "inspection", { run_id: state.run_id });
+    const html = shared ? data.html : data.review_report?.html;
+    if (!html) throw new Error(t("저장할 리포트가 없습니다."));
     const selected = await dialog.showSaveDialog(window, {
-      defaultPath: "chickadee-review.html",
+      defaultPath: shared ? "chickadee-shared-review.html" : "chickadee-review.html",
       filters: [{ name: t("HTML 리포트"), extensions: ["html"] }],
     });
     if (selected.canceled) return null;
-    await fs.writeFile(selected.filePath, data.review_report.html, "utf8");
+    await fs.writeFile(selected.filePath, html, "utf8");
     return { saved: true };
   });
   handler("choose-folder", async (options) => {

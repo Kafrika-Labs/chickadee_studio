@@ -55,6 +55,7 @@ class DesktopBridge:
         self.live_graph = {'nodes': {}, 'edges': {}}
         self.agent_config = None
         self.site_access = {}
+        self.login_proxy = None
         self.agent_worker = None
         self.agent_stop = Event()
         self.agent_data = {'ledger': {}, 'assessments': [], 'events': []}
@@ -95,6 +96,17 @@ class DesktopBridge:
     def command(self, method, params):
         if not isinstance(params, dict):
             raise ValueError('명령 인자가 올바르지 않습니다.')
+        if method == 'shared-report':
+            if self.running or not self.outcome or params.get('run_id') != self.run_id:
+                raise ValueError('검사 완료 후 현재 결과를 내보내세요.')
+            from .privacy import shared_copy
+            secrets = [entry.token for entry in self.site_access.values()]
+            if self.agent_config: secrets.append(self.agent_config.get('api_key', ''))
+            result, report, agent = (shared_copy(value, secrets) for value in
+                                     (self.outcome.result, self.outcome.report, self.agent_data))
+            output = review_report(result, report, agent)
+            output['sharing'] = 'text-only-redacted'
+            return output
         if method == 'site-access':
             if params:
                 if self.running:
@@ -107,6 +119,26 @@ class DesktopBridge:
                         raise ValueError('A maximum of 20 sites can be registered per session.')
                     self.site_access[entry.origin] = entry
             return {'sites': [entry.public() for entry in self.site_access.values()]}
+        if method == 'access-preflight':
+            if self.running: raise ValueError('검사 완료 후 인증을 확인하세요.')
+            entry = self.site_access.get(site_origin(params.get('url', '')))
+            if not entry: raise ValueError('사이트 인증을 먼저 등록하세요.')
+            from .access_preflight import probe, server_rule
+            if params.get('rule') is True:
+                return {'rule': server_rule(entry), 'expires_at': entry.expires_at}
+            return probe(entry, params.get('url'), params.get('marker'))
+        if method == 'login-network':
+            pending = self.control.login.session(params.get('request_id'))
+            if self.login_proxy:
+                self.login_proxy.close()
+            from .network_boundary import ProxySession
+            self.login_proxy = ProxySession(pending['requested_url'], pending.get('private_addresses', ()))
+            return {'proxy': self.login_proxy.url}
+        if method == 'login-network-close':
+            if self.login_proxy:
+                self.login_proxy.close()
+                self.login_proxy = None
+            return {'closed': True}
         if method == 'login-session':
             return self.control.login.session(params.get('request_id'))
         if method == 'login-complete':
@@ -520,7 +552,8 @@ class DesktopBridge:
                                  **{k: v for k, v in event.items() if k in ('url', 'message', 'reason', 'target_url')}})
                 ocr = self.outcome.report.get('ocr_summary', {})
                 outcome = collect_page(option, entry, timeout, self.agent_stop, progress,
-                    ocr_enabled=ocr.get('enabled', True), ocr_max_images=ocr.get('max_images', 50))
+                    ocr_enabled=ocr.get('enabled', True), ocr_max_images=ocr.get('max_images', 50),
+                    private_addresses=self.outcome.report.get('profile', {}).get('private_addresses', ()))
                 packets = outcome.report.get('evidence_packets', [])[:12]
                 image_ids = {p.get('image_id') for p in packets}
                 images, image_bytes, preview_bytes, omitted = [], 0, 0, 0
@@ -673,6 +706,8 @@ def main():
     bridge.agent_stop.set()
     bridge.runtime_stop.set()
     bridge.content_stop.set()
+    if bridge.login_proxy:
+        bridge.login_proxy.close()
     if bridge.content_worker:
         bridge.content_worker.join(timeout=3)
     if bridge.runtime_worker:

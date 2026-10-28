@@ -127,14 +127,15 @@ async def active_timeout(awaitable, seconds, login, excluded_seconds=None):
             await asyncio.gather(task, return_exceptions=True)
 
 
-def fetch_favicon(url):
+def fetch_favicon(url, address_policy=None):
     """Read a small raster icon without redirects or third-party favicon services."""
     import base64
     import io
     import urllib.request
     from PIL import Image
     from .image_ocr import NoRedirect
-    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+    from .network_boundary import AddressPolicy
+    opener = (address_policy or AddressPolicy(url)).opener()
     with opener.open(urllib.request.Request(url, headers={'User-Agent': 'Chickadee'}), timeout=1) as response:
         data = response.read(131073)
     if len(data) > 131072:

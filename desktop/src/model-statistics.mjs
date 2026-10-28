@@ -43,6 +43,7 @@ export function modelStatistics(data = {}) {
       ...scores("laya"),
     },
     ocr: {
+      reasons: Array.isArray(ocr.reasons) ? ocr.reasons : [],
       analyzed: count(ocr.completed),
       total: count(ocr.images) + count(ocr.skipped),
       status:

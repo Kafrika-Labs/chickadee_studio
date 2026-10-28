@@ -4,6 +4,19 @@
 
 This guide covers the current desktop app. Start with starting a scan, workflow/OCR and reviewing findings. The app's Korean guide is available under **설정 → 사용 가이드** (Settings → User guide). English explanations below retain key Korean control labels.
 
+## Local development
+
+After preparing the repository's Python environment and installing the desktop dependencies, run:
+
+```powershell
+cd C:\Users\castle\Desktop\project\chickadee_studio\desktop
+npm run dev
+```
+
+On Windows this opens a separate Microsoft Edge development window connected to the real Python scanner. Saving UI source files rebuilds and refreshes the UI; active scans defer refresh until completion. Restart the development window after editing Python backend code. Development preferences and results stay under `artifacts/dev-session`. Existing local model environments are reused without automatically downloading models or registering API keys.
+
+Close the development window or press Ctrl+C to stop. Native file dialogs, OS notifications and separate login windows require the Electron app. This browser preview does not validate Electron installation, signing or native APIs. Its static server binds only to `127.0.0.1`; Python control is not exposed through an HTTP API.
+
 ## Contents
 
 1. [Start a scan](#guide-1)

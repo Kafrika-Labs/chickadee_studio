@@ -38,10 +38,11 @@ def exploration_options(packet, report, entry_url):
     return result
 
 
-def collect_page(option, entry_url, timeout, stop, emit, *, ocr_enabled=True, ocr_max_images=50):
+def collect_page(option, entry_url, timeout, stop, emit, *, ocr_enabled=True, ocr_max_images=50, private_addresses=()):
     if origin(option['url']) != origin(entry_url):
         raise ValueError('사이트 밖 추가 탐색은 허용되지 않습니다.')
     config = ScanConfig(option['url'], max_pages=1, timeout_sec=max(.5, min(20, timeout)),
+                        private_addresses=tuple(private_addresses),
                         ocr_enabled=ocr_enabled, ocr_max_images=ocr_max_images,
                         runtime_mode='standard' if ocr_enabled else 'economy',
                         # OCR cold start shares this page budget. A separate

@@ -20,6 +20,8 @@ class LoginWindow {
     if(this.current?.requestId===requestId) { this.current.window.show(); this.current.window.focus(); return; }
     await this.close();
     const isolated=this.session.fromPartition('chickadee-login-'+randomUUID(),{cache:false});
+    const network=await this.backend.request('login-network',{request_id:requestId});
+    await isolated.setProxy({proxyRules:network.proxy,proxyBypassRules:'<-loopback>'});
     isolated.setPermissionRequestHandler((_contents,_permission,callback)=>callback(false));
     isolated.setPermissionCheckHandler(()=>false);
     isolated.on('will-download',event=>event.preventDefault());
@@ -33,6 +35,7 @@ class LoginWindow {
     const win=new this.BrowserWindow({width:1000,height:780,title:t("사이트 로그인 · 완료 후 Chickadee에서 검사 재개"),
       parent:this.owner(),autoHideMenuBar:true,webPreferences:{session:isolated,nodeIntegration:false,contextIsolation:true,sandbox:true,webSecurity:true}});
     this.current={requestId,window:win,session:isolated,target};
+    win.webContents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp');
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
     win.webContents.on('will-navigate',(event,url)=>{try{webURL(url);}catch{event.preventDefault();}});
     win.webContents.on('will-redirect',(event,url)=>{try{webURL(url);}catch{event.preventDefault();}});
@@ -59,6 +62,7 @@ class LoginWindow {
     if(!previous.window.isDestroyed()) previous.window.destroy();
     await previous.session.clearStorageData();
     await previous.session.clearCache();
+    await this.backend.request('login-network-close',{});
   }
 }
 module.exports={LoginWindow,webURL,playwrightCookie};

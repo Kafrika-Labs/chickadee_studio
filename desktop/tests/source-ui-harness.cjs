@@ -6,7 +6,7 @@ const fs = require("node:fs/promises");
 const path = require("node:path");
 const http = require("node:http");
 
-exports.launch = async ({ env }) => {
+exports.launch = async ({ env, headless = true, channel, chromiumSandbox, browserClipboard = false }) => {
   const root = path.resolve(__dirname, "../..");
   const data = env.CHICKADEE_TEST_DATA;
   const { Notifications } = require('../electron/notifications.cjs');
@@ -100,8 +100,8 @@ exports.launch = async ({ env }) => {
       const selected = await dialog.showSaveDialog();
       if (selected.canceled) return null;
       const state = await backend.request('state');
-      const data = await backend.request('inspection', {run_id:state.run_id});
-      await fs.writeFile(selected.filePath, data.review_report.html, 'utf8');
+      const data = await backend.request(value?.shared === true ? 'shared-report' : 'inspection', {run_id:state.run_id});
+      await fs.writeFile(selected.filePath, value?.shared === true ? data.html : data.review_report.html, 'utf8');
       return {saved:true};
     }
     if (method === 'checkUpdates') updateStatus = 'current';
@@ -114,6 +114,7 @@ exports.launch = async ({ env }) => {
     if (method === "saveNotifications") return notifications.save(value);
     if (method === "testNotification") return notifications.testDesktop();
     const extensions = { inspection: "inspection", siteAccess: "site-access", configureAgent: "agent-configure", runAgent: "agent-run", stopAgent: "agent-stop",
+      accessPreflight: "access-preflight",
       environment: "runtime-info", configureRuntime: "runtime-configure", testRuntime: "runtime-test", analyzeContent: "content-analyze" };
     if (extensions[method]) return backend.request(extensions[method], value || {});
     if (method === "state")
@@ -178,7 +179,9 @@ exports.launch = async ({ env }) => {
   try {
     browser = await chromium.launch({
       executablePath: env.CHICKADEE_PREVIEW_CHROMIUM,
-      headless: true,
+      headless,
+      channel,
+      chromiumSandbox,
     });
     page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
     await page.route("**/*", (route) =>
@@ -192,7 +195,7 @@ exports.launch = async ({ env }) => {
     await page.exposeBinding("__sourceInvoke", (_source, method, value) =>
       invoke(method, value),
     );
-    await page.addInitScript(() => {
+    await page.addInitScript(({browserClipboard}) => {
       window.chickadee = Object.fromEntries(
         [
           "state",
@@ -201,7 +204,7 @@ exports.launch = async ({ env }) => {
           "resume",
           "stop",
           "capabilities",
-          "inspection", "siteAccess", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "analyzeContent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
+          "inspection", "siteAccess", "accessPreflight", "configureAgent", "runAgent", "stopAgent", "environment", "configureRuntime", "testRuntime", "analyzeContent", "notificationState", "saveNotifications", "testNotification", "scheduleState", "saveSchedule", "removeSchedule",
           "updateState", "checkUpdates", "downloadUpdate", "showUpdateFile", "openReleaseNotes",
           "preferences", "reloadLanguage",
           "history",
@@ -221,6 +224,7 @@ exports.launch = async ({ env }) => {
         ]),
       );
       window.chickadee.language = new URLSearchParams(location.search).get('language') || 'ko';
+      if (browserClipboard) window.chickadee.copy = text => navigator.clipboard.writeText(text);
       window.chickadee.onEvent = (callback) => {
         window.__sourceEvents ||= new Set();
         window.__sourceEvents.add(callback);
@@ -229,9 +233,10 @@ exports.launch = async ({ env }) => {
           window.__sourceEvents.delete(callback);
         };
       };
-    });
+    }, {browserClipboard});
     await page.goto(origin + '?language=' + encodeURIComponent(env.CHICKADEE_LANGUAGE || preferences.language || 'ko'));
     return {
+      url: origin,
       firstWindow: async () => page,
       evaluate: async (callback, value) => callback({ dialog }, value),
       close,

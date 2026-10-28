@@ -8,6 +8,15 @@ export default function SiteAccessSettings({ disabled }) {
   const [hours, setHours] = useState(1), [busy, setBusy] = useState(false), [message, setMessage] = useState('');
   const [now, setNow] = useState(Date.now());
   const [tokenMessage, setTokenMessage] = useState('');
+  const [checkUrl, setCheckUrl] = useState(''), [marker, setMarker] = useState('');
+  async function preflight(rule = false) {
+    setBusy(true); setMessage('');
+    try {
+      const result = await window.chickadee.accessPreflight({url: checkUrl, marker, rule});
+      if (rule) { await window.chickadee.copy(result.rule); setMessage('서버 만료 시각을 포함한 규칙을 복사했습니다. WAF에서 토큰을 직접 입력하세요.'); }
+      else setMessage(({verified:'인증 헤더가 있는 요청에서만 확인 문구를 찾았습니다.', public:'인증 없이도 같은 문구가 표시됩니다. 인증 적용 여부는 확인되지 않았습니다.', blocked:'접근이 거부됐습니다.', rate_limited:'요청 제한으로 확인을 중단했습니다.', expired:'등록한 인증이 만료됐습니다.', unconfirmed:'확인 문구를 찾지 못했습니다. 로그인과 차단 상태를 확인하세요.'})[result.status]);
+    } catch(error) { setMessage(error.message); } finally { setBusy(false); }
+  }
   useEffect(() => {
     if (!tokenMessage) return;
     const timer = setTimeout(() => setTokenMessage(''), 3000);
@@ -48,6 +57,8 @@ export default function SiteAccessSettings({ disabled }) {
     {message && <p key={message} role="status">{message}</p>}
     <ul>{sites.map(site => <li key={site.origin}><div><strong>{site.origin}{site.path_prefix}</strong><span>{site.expires_at * 1000 > now ? t('등록됨 · WAF 허용 여부는 검사 시 확인') : t('만료됨')} · {new Date(site.expires_at * 1000).toLocaleString()}</span></div><button type="button" disabled={disabled || busy} aria-label={t('{site} 인증 해제', { site: site.origin })} onClick={() => apply({ remove: site.origin })}>{t('해제')}</button></li>)}</ul>
     <details className="site-access-guide"><summary><div><strong>{t('WAF 허용 규칙 안내')}</strong></div><ChevronDown size={16} aria-hidden="true" /></summary><div className="site-access-guide-body">
+      <div className="site-access-fields"><label>인증 확인 URL<input type="url" value={checkUrl} onChange={e => setCheckUrl(e.target.value)} placeholder="https://example.com/boards/private" /></label><label>로그인 상태 확인 문구<input value={marker} onChange={e => setMarker(e.target.value)} placeholder="보호된 페이지에만 있는 문구" /></label></div>
+      <div className="site-access-actions"><button disabled={disabled || busy || !checkUrl || !marker} onClick={() => preflight()}>접근 확인</button><button disabled={disabled || busy || !checkUrl} onClick={() => preflight(true)}>서버 규칙 복사</button></div>
       <p>{t('운영자가 허용한 사이트에만 전용 인증 헤더를 보냅니다. 사이트 WAF에도 같은 토큰의 허용 규칙을 등록하세요.')}</p>
       <p>{t('토큰은 이번 앱 실행 동안만 보관됩니다. 재시작하면 다시 등록하세요.')}</p>
       <div className="site-access-header-name"><span>{t('인증 헤더')}</span><code>X-Chickadee-Token</code><span>GET / HEAD</span></div>

@@ -99,6 +99,23 @@ function InitialGraphFit({ run, hasObservations }) {
 const api = window.chickadee;
 const EMPTY = { graph: { nodes: [], edges: [] }, packets: [], agent: { assessments: [], ledger: {} } };
 
+function ReportExport({ onExport }) {
+  const [open, setOpen] = useState(false), ref = useRef(null);
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = event => { if (!ref.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', dismiss);
+    ref.current?.querySelector('[role="menuitem"]')?.focus();
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [open]);
+  return <div className="action-menu" ref={ref} onKeyDown={event => { if (event.key === 'Escape') { setOpen(false); ref.current?.querySelector('button')?.focus(); event.stopPropagation(); } }}>
+    <button className="review-text-action" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}><Download size={14} aria-hidden="true" />{t("리포트 저장")}</button>
+    <div className="action-menu-panel" role="menu" data-open={open} inert={!open} aria-hidden={!open}>
+      {[['원본 리포트', false], ['공유용 리포트', true]].map(([label, shared]) => <button key={label} role="menuitem" onClick={() => { setOpen(false); onExport(shared); }}>{t(label)}</button>)}
+    </div>
+  </div>;
+}
+
 export default function InspectionInsights({ runStatus = "idle", onOpenSettings, onOpenHistory, agentConfig, tab, setTab }) {
   const [data, setData] = useState(EMPTY), [run, setRun] = useState(null);
   const [selected, setSelected] = useState(null), [packetId, setPacketId] = useState("");
@@ -155,9 +172,9 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
   const total = report?.total ?? data.packets.filter(item => !item.supplemental).length;
   const completed = report?.completed || 0;
   const assessmentLabel = value => ({ ad_suspected: t("광고 의심"), benign_context: t("정상 문맥 제안"), uncertain: t("보류") }[value] || value);
-  async function downloadReport() {
+  async function downloadReport(shared = false) {
     await action(async () => {
-      const result = await api.exportReport();
+      const result = await api.exportReport({ shared });
       if (result?.saved) setMessage(t("리포트를 저장했습니다."));
     });
   }
@@ -230,7 +247,7 @@ export default function InspectionInsights({ runStatus = "idle", onOpenSettings,
         {visit.blocked_requests.map((item, i) => <p key={i}>{item.reason} / {item.target_url || item.url}</p>)}
         <EvidenceScreenshot screenshot={Object.values(visit.screenshots || {})[0]} />
       </details>)}
-      {data.review_report && !busy && <div className="review-results-heading"><h3>{t("검토 결과")} <span>{assessments.length}</span></h3><button className="review-text-action" onClick={downloadReport}><Download size={14} aria-hidden="true" />{t("리포트 저장")}</button></div>}
+      {data.review_report && !busy && <div className="review-results-heading"><h3>{t("검토 결과")} <span>{assessments.length}</span></h3><ReportExport onExport={downloadReport} /></div>}
       {assessments.slice().reverse().map((item, index) => <article className="inspection-detail" key={index}>
         <strong>{{ ad_suspected: t("광고 의심"), benign_context: t("정상 문맥 제안"), uncertain: t("보류") }[item.assessment]}</strong><p>{item.summary}</p>
         {item.phishing_assessment && <p>{t("피싱 분석:")} {{ suspected: t("의심 신호"), no_observed_signal: t("관측 신호 없음"), uncertain: t("추가 확인") }[item.phishing_assessment]}{item.phishing_reasons?.length > 0 && ` / ${item.phishing_reasons.join(" / ")}`}</p>}
