@@ -1944,12 +1944,11 @@ function App() {
                     {t("CSV 저장")}
                   </Button>
                 </div>
-                {selectedIds.size > 0 && (
+                <div className="bulk-toolbar-shell" data-open={selectedIds.size > 0} inert={selectedIds.size === 0}><div className="bulk-toolbar-clip">
                   <div className="bulk-toolbar">
                     <strong>{t("{count}개 선택", { count: selectedIds.size })}</strong>
                     <Button
                       icon="CheckCheck"
-              image={checkImage}
                       variant="ghost"
                       disabled={reviewSaving || running}
                       onClick={() =>
@@ -1986,7 +1985,7 @@ function App() {
                       <Icon name="X" size={15} />
                     </button>
                   </div>
-                )}
+                </div></div>
                 <div className="table-scroll">
                   <table>
                     <thead>
