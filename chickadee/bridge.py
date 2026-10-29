@@ -326,8 +326,11 @@ class DesktopBridge:
         if method == 'export':
             if self.outcome is None or self.running:
                 raise ValueError('완료된 결과가 없습니다.')
-            self.outcome.save_csv(Path(params['path']))
-            return {'path': params['path']}
+            if params.get('run_id') is not None and params['run_id'] != self.run_id:
+                raise ValueError('현재 검사 결과와 일치하지 않습니다.')
+            from .spreadsheet import save_results
+            return save_results(params['path'], self.outcome.result, self.outcome.report,
+                                self.reviews.data if self.reviews else None, params.get('ids'))
         raise ValueError('지원하지 않는 명령입니다.')
 
     def _sidecar(self, name, default):

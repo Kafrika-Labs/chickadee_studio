@@ -1,4 +1,6 @@
 export default {
+  "엑셀 저장": "Save Excel",
+  "탐지 내역을 저장했습니다.": "Findings saved.",
   "실패 이유": "Failure reason",
   "사이트가 검사 요청을 거부했습니다 (HTTP 403). 사이트의 접근 권한 또는 WAF 허용 설정을 확인하세요.": "The site rejected the scan request (HTTP 403). Check the site's access permissions or WAF allow rules.",
   "저장된 검사 기록에서 확인된 오류입니다.": "Errors recorded during this scan are shown below.",

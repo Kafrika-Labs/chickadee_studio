@@ -428,14 +428,8 @@ async function initialize() {
     currentPath = value.path;
     return value;
   });
-  handler("export", async () => {
-    const selected = await dialog.showSaveDialog(window, {
-      defaultPath: "chickadee-results.csv",
-      filters: [{ name: "CSV", extensions: ["csv"] }],
-    });
-    if (selected.canceled) return null;
-    return backend.request("export", { path: selected.filePath });
-  });
+  handler("export", options =>
+    require("./result-export.cjs").exportResults({ dialog, window, backend }, options));
   handler("export-report", async (options) => {
     const state = await backend.request("state");
     if (state.running || !state.run_id)

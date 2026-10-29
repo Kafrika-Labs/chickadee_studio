@@ -1327,13 +1327,13 @@ function App() {
       action: load,
     },
     {
-      label: t("CSV 저장"),
+      label: t("엑셀 저장"),
       icon: "Download",
       disabled: !outcome || running,
       action: () =>
         action(async () => {
-          const value = await api.exportCSV();
-          if (value) tell(t("CSV를 저장했습니다."), "success");
+          const value = await api.exportCSV({ run_id: activeRun.current, ...(selectedIds.size ? { ids: expandPageIds([...selectedIds], records) } : {}) });
+          if (value) tell(t("탐지 내역을 저장했습니다."), "success");
         }),
     },
     {
@@ -1936,12 +1936,12 @@ function App() {
                     disabled={!outcome || running}
                     onClick={() =>
                       action(async () => {
-                        const result = await api.exportCSV();
-                        if (result) tell(t("CSV를 저장했습니다."), "success");
+                        const result = await api.exportCSV({ run_id: activeRun.current, ...(selectedIds.size ? { ids: expandPageIds([...selectedIds], records) } : {}) });
+                        if (result) tell(t("탐지 내역을 저장했습니다."), "success");
                       })
                     }
                   >
-                    {t("CSV 저장")}
+                    {t("엑셀 저장")}
                   </Button>
                 </div>
                 <div className="bulk-toolbar-shell" data-open={selectedIds.size > 0} inert={selectedIds.size === 0}><div className="bulk-toolbar-clip">

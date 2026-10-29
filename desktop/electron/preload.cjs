@@ -52,7 +52,7 @@ contextBridge.exposeInMainWorld(
     review: (value) => invoke("desktop:review", value),
     load: () => invoke("desktop:load"),
     history: (id) => invoke("desktop:history", id),
-    exportCSV: () => invoke("desktop:export"),
+    exportCSV: (value) => invoke("desktop:export", value),
     exportReport: (value) => invoke("desktop:export-report", value),
     chooseFolder: (options) => invoke("desktop:choose-folder", options),
     openFolder: () => invoke("desktop:open-folder"),

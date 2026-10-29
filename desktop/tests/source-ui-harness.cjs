@@ -144,10 +144,7 @@ exports.launch = async ({ env, headless = true, channel, chromiumSandbox, browse
         : backend.request("load", { path: selected.filePaths[0] });
     }
     if (method === "exportCSV") {
-      const selected = await dialog.showSaveDialog();
-      return selected.canceled
-        ? null
-        : backend.request("export", { path: selected.filePath });
+      return require('../electron/result-export.cjs').exportResults({ dialog, backend }, value);
     }
     if (method === "review")
       return backend.request("review", { ...value, actor: "human" });
